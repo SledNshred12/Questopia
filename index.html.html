@@ -1,0 +1,2049 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Questopia</title>
+<meta name="description" content="Questopia: daily, weekly and season quests that get you off the screen and outside, with points to spend on your avatar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --field:#F1F6EA;
+  --paper:#FCFEF9;
+  --moss:#2E5E3E;
+  --moss-dark:#1E4029;
+  --sun:#F5B82E;
+  --sun-soft:#FFEBB8;
+  --sky:#CFE8F5;
+  --ink:#1F2A22;
+  --muted:#5D6B60;
+  --line:#D9E3D0;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--field);color:var(--ink);
+  font-family:var(--body);font-size:17px;line-height:1.5;
+  min-height:100vh;
+}
+.sky{
+  position:absolute;inset:0 0 auto 0;height:260px;z-index:0;
+  background:linear-gradient(var(--sky),var(--field));
+}
+.wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:20px 16px 56px}
+h1,h2,h3,.big-name{font-family:var(--display);margin:0;line-height:1.1;letter-spacing:-0.01em;font-variant-ligatures:none;font-feature-settings:"liga" 0,"clig" 0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--moss);outline-offset:2px;border-radius:8px}
+canvas{display:block}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Header */
+.top{display:flex;align-items:center;gap:12px}
+.me{
+  display:block;width:72px;height:72px;border-radius:50%;border:0;padding:5px;flex:none;
+  background:var(--moss);box-shadow:0 2px 8px rgba(30,64,41,.18);
+}
+.me-in{
+  display:block;width:100%;height:100%;border-radius:50%;overflow:hidden;
+  background:linear-gradient(#DDF0FA,#EEF6E2);border:2px solid var(--paper);
+}
+.me canvas,.me svg{width:100%;height:100%}
+
+/* Locker button on the quest screen */
+.locker-btn{
+  display:flex;align-items:center;gap:12px;width:100%;margin-top:16px;text-align:left;
+  background:var(--paper);border:2px solid var(--moss);border-radius:16px;padding:10px 14px;color:var(--moss-dark);
+}
+.locker-btn:hover{background:#E6F0DC}
+.locker-btn svg{width:28px;height:28px;flex:none}
+.lb-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.lb-txt b{font-family:var(--display);font-size:19px}
+.lb-txt span{font-size:13px;color:var(--muted)}
+.locker-btn .chev{font-size:26px;line-height:1}
+.brand{flex:1;min-width:0}
+.brand h1{font-size:26px;font-weight:800;color:var(--moss-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand p{margin:2px 0 0;font-size:15px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.points{
+  background:var(--moss);color:#fff;border-radius:999px;
+  padding:8px 16px;font-family:var(--display);font-weight:800;font-size:22px;
+  line-height:1;text-align:center;flex:none;
+}
+.points small{display:block;font-family:var(--body);font-weight:600;font-size:11px;opacity:.85;margin-top:3px}
+
+/* Tabs */
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:22px 0 14px;
+  background:var(--paper);border:1px solid var(--line);padding:5px;border-radius:16px}
+.tab{
+  border:0;background:transparent;border-radius:12px;padding:10px 4px;
+  font-weight:600;color:var(--muted);
+}
+.tab[aria-selected="true"]{background:var(--moss);color:#fff}
+
+/* Panel */
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:18px 18px 6px}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.panel-head h2{font-size:22px}
+.panel-head span{font-size:14px;color:var(--muted)}
+.quests{list-style:none;margin:8px 0 0;padding:0}
+.quest{
+  display:grid;grid-template-columns:1fr auto;gap:6px 14px;align-items:center;
+  padding:16px 0;border-top:1px solid var(--line);
+}
+.quest:first-child{border-top:0}
+.q-title{font-weight:600}
+.q-meta{display:flex;gap:10px;align-items:center;margin-top:4px;font-size:14px;color:var(--muted)}
+.pts{background:var(--sun-soft);color:#6B4A00;border-radius:999px;padding:1px 10px;font-weight:600;font-size:13px}
+.btn{
+  border:2px solid var(--moss);background:var(--paper);color:var(--moss-dark);
+  border-radius:12px;padding:9px 16px;font-weight:600;min-width:96px;
+  transition:transform .08s ease,background .15s ease;
+}
+.btn:hover{background:#E6F0DC}
+.btn:active{transform:scale(.96)}
+.btn.solid{background:var(--moss);color:#fff}
+.btn.solid:hover{background:var(--moss-dark)}
+.quest.done .btn{background:var(--moss);color:#fff}
+.quest.done .q-title{color:var(--muted)}
+.bar{grid-column:1/-1;height:10px;background:var(--line);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--sun);border-radius:999px;transition:width .3s ease}
+.auto{font-size:13px;color:var(--muted);min-width:96px;text-align:right}
+.badge{width:1.1em;height:1.1em;vertical-align:-.2em;margin-right:5px}
+.note{margin:18px 4px 0;font-size:14px;color:var(--muted);text-align:center}
+
+/* Avatar editor */
+.editor h2{font-size:34px;font-weight:800;color:var(--moss-dark);margin-top:18px}
+.editor > p{color:var(--muted);margin:8px 0 16px}
+.stage{
+  position:sticky;top:8px;z-index:4;height:300px;
+  background:linear-gradient(#DDF0FA,#EEF6E2);
+  border:2px solid var(--paper);border-radius:22px;
+  box-shadow:0 0 0 1px var(--line),0 8px 20px rgba(30,64,41,.12);
+  display:flex;justify-content:center;overflow:hidden;
+}
+.stage canvas{height:100%;width:auto;aspect-ratio:1;touch-action:pan-y;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.stage svg{height:100%;width:auto;aspect-ratio:1}
+.stage .hint{position:absolute;left:12px;bottom:10px;font-size:13px;color:var(--muted)}
+.nameplate{
+  position:absolute;left:10px;top:10px;max-width:calc(100% - 130px);
+  background:rgba(252,254,249,.9);border:1px solid var(--line);border-radius:12px;padding:6px 12px;
+}
+.nameplate b{display:block;font-family:var(--display);font-size:18px;line-height:1.15;color:var(--moss-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nameplate span{display:block;font-size:13px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stage .rand{
+  position:absolute;right:10px;top:10px;min-width:0;padding:6px 12px;font-size:14px;border-width:2px;
+}
+.group{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:16px 16px 6px;margin-top:14px}
+.group > h3{font-size:20px;margin-bottom:6px}
+.row{margin:0 0 14px}
+.row-label{font-size:14px;color:var(--muted);font-weight:600;margin:0 0 8px}
+.swatches,.chips{display:flex;flex-wrap:wrap;gap:8px}
+.sw{
+  position:relative;width:40px;height:40px;border-radius:50%;padding:0;
+  border:3px solid var(--paper);box-shadow:0 0 0 1px #B9C6AE;
+}
+.sw[aria-pressed="true"],.sw.custom.active{box-shadow:0 0 0 3px var(--moss)}
+.sw.custom{
+  display:block;cursor:pointer;
+  background:conic-gradient(#e44,#ec4,#4c6,#4ad,#a5e,#e44);
+}
+.sw.custom::after{
+  content:"+";position:absolute;inset:0;display:grid;place-items:center;
+  color:#fff;font-weight:800;font-size:18px;text-shadow:0 1px 3px rgba(0,0,0,.6);
+}
+.sw.custom.active::after{content:""}
+.sw.custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
+.sw.custom:focus-within{outline:3px solid var(--moss);outline-offset:2px}
+.chip{
+  border:2px solid var(--line);background:var(--paper);color:var(--ink);
+  border-radius:999px;padding:7px 14px;font-weight:600;font-size:15px;
+}
+.chip[aria-pressed="true"]{background:var(--moss);border-color:var(--moss);color:#fff}
+.editor .done,.welcome .done{width:100%;margin-top:18px;padding:14px;font-size:18px}
+.welcome > .wordmark{
+  margin:18px 0 0;font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-0.01em;
+  color:var(--moss);
+}
+.welcome h2{font-size:34px;font-weight:800;color:var(--moss-dark);margin-top:4px}
+.welcome > p{color:var(--muted);margin:8px 0 22px}
+.welcome form{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:18px}
+.text{
+  width:100%;font:inherit;font-size:18px;color:var(--ink);background:var(--field);
+  border:2px solid var(--line);border-radius:12px;padding:12px 14px;
+}
+.text:focus{outline:3px solid var(--moss);outline-offset:1px;border-color:var(--moss)}
+.text[aria-invalid="true"]{border-color:#B3261E}
+.err{margin:8px 0 0;min-height:1.4em;font-size:14px;color:#B3261E;font-weight:600}
+
+/* Locker */
+.locker-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.locker-top h2{flex:1;font-size:30px;font-weight:800;color:var(--moss-dark)}
+.backlink{background:none;border:0;color:var(--moss-dark);font-weight:600;padding:6px 4px;font-size:16px}
+.locker-top .points{font-size:20px;padding:6px 14px}
+.dock{position:sticky;top:8px;z-index:4;display:grid;gap:8px}
+.np{
+  display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);
+  border-radius:18px;padding:8px 12px;box-shadow:0 6px 16px rgba(30,64,41,.1);
+}
+.np .me{width:56px;height:56px;padding:4px}
+.np-txt{min-width:0}
+.np-txt b{display:block;font-family:var(--display);font-size:19px;line-height:1.15;color:var(--moss-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-txt span{display:block;font-size:14px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock .stage{position:relative;top:auto;height:200px}
+.cats{display:flex;gap:8px;overflow-x:auto;padding:14px 2px 4px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cats .chip{flex:none;white-space:nowrap}
+.cat-note{margin:6px 2px 0;font-size:14px;color:var(--muted)}
+.items{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.items.one{grid-template-columns:1fr}
+.item{
+  background:var(--paper);border:2px solid var(--line);border-radius:18px;padding:10px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.item.equipped{border-color:var(--moss)}
+.item.row{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px}
+.item-name{display:block;font-family:var(--display);font-size:17px;line-height:1.2}
+.item-meta{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.item .btn{width:100%;min-width:0;padding:8px 10px;font-size:15px}
+.item.row .btn{width:auto;min-width:120px;flex:none}
+.item .btn:disabled:not(.solid){opacity:.55;cursor:not-allowed}
+.item .btn.solid:disabled{opacity:1;cursor:default}
+.thumb{
+  aspect-ratio:1;border-radius:12px;overflow:hidden;background:linear-gradient(#DDF0FA,#EEF6E2);
+}
+.thumb canvas{width:100%;height:100%}
+.thumb-fallback{display:grid;place-items:center;text-align:center;padding:8px;font-weight:600;color:var(--muted)}
+.ring-sample{width:84px;height:84px;margin:4px auto 0;padding:6px}
+
+/* Quest timers */
+.btn.timer{background:var(--sun-soft);border-color:var(--sun);color:#6B4A00;font-variant-numeric:tabular-nums;opacity:1}
+.btn.timer:disabled{cursor:default}
+.linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;font-size:14px}
+/* Challenges */
+.pick{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:10px 14px;font-weight:600}
+.pick input{width:22px;height:22px;accent-color:var(--moss)}
+.chal-form .row-label{margin-top:18px}
+.chal-form .row-label:first-child{margin-top:4px}
+.chal-form .text{font-size:16px;text-transform:none}
+.range{width:100%;accent-color:var(--moss);height:36px}
+.prizes{margin:4px 2px 0;font-size:14px;font-weight:600;color:var(--muted)}
+.chal-form .go{width:100%;margin-top:10px;padding:14px;font-size:18px}
+.chal-sum{display:flex;justify-content:space-between;align-items:baseline;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:12px 16px}
+.chal-sum b{font-family:var(--display);font-size:20px;color:var(--moss-dark)}
+.chal-sum span{color:var(--muted);font-weight:600;font-size:14px}
+.challenge .prizes{margin:10px 2px 12px}
+.stand{display:flex;align-items:center;gap:12px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:10px 14px}
+.stand.mine{border:2px solid var(--moss)}
+.place{flex:none;width:34px;height:34px;border-radius:50%;background:var(--sun-soft);color:#6B4A00;font:800 17px/34px var(--display);text-align:center}
+.stand .pts{flex:none}
+/* Friends */
+.locker-btn + .locker-btn{margin-top:10px}
+.event-banner{margin-top:16px;display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#FFE9A8,#FFD166);border:2px solid var(--sun);border-radius:16px;padding:10px 14px;color:#4A3200}
+.event-banner b{font-family:var(--display);font-size:20px}
+.event-banner span{font-size:14px;font-weight:600}
+.event-banner + .locker-btn{margin-top:10px}
+.pts.bonus{background:var(--sun);color:#3a2800}
+.admin .group{margin-top:14px}
+.admin select{font:inherit;font-size:16px}
+.admin .btn.big{width:100%;margin-top:10px;padding:14px;font-size:18px}
+.acct-line{margin:6px 4px 0;text-align:center;font-size:14px;color:var(--muted)}
+.fine{font-size:13px;color:var(--muted);margin:12px 0 0}
+.account .group p{margin:8px 0 12px}
+.account .btn.wide{width:100%;margin-top:10px;padding:13px;font-size:17px}
+.account .stat{font-family:var(--display);font-size:18px;color:var(--moss-dark);margin:0 0 4px}
+.admin .stat{font-family:var(--display);font-size:22px;color:var(--moss-dark)}
+.tag{display:inline-block;margin-left:6px;padding:0 8px;border-radius:999px;background:var(--sun);color:#3a2800;font:700 11px/18px var(--body);vertical-align:2px;text-transform:uppercase;letter-spacing:.04em}
+.friends .locker-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+.friends .locker-top .backlink{justify-self:start}
+.friends .locker-top h2{flex:none;text-align:center}
+.count-badge{
+  flex:none;min-width:22px;height:22px;padding:0 6px;border-radius:999px;
+  background:#E0312B;color:#fff;font:800 13px/22px var(--display);text-align:center;
+  box-shadow:0 0 0 2px var(--paper);
+}
+.demo-note{margin:0 0 12px;padding:8px 12px;border-radius:12px;background:var(--sun-soft);color:#6B4A00;font-size:14px;font-weight:600}
+.code-card{background:var(--paper);border:2px solid var(--moss);border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:12px}
+.code-card > div{flex:1;min-width:0}
+.code-card small{display:block;font-size:13px;font-weight:600;color:var(--muted)}
+.code-card b{display:block;font-family:Arial,Helvetica,sans-serif;font-weight:700;font-size:28px;letter-spacing:.08em;color:var(--moss-dark)}
+.code-card .btn{min-width:0;padding:8px 14px}
+.add-friend{display:flex;gap:8px;margin-top:12px}
+.add-friend .text{flex:1;min-width:0;font-size:16px;text-transform:uppercase}
+.add-friend .btn{min-width:0}
+.pending-btn{margin-top:12px}
+.sec-title{font-size:20px;margin:20px 2px 10px;display:flex;align-items:baseline;justify-content:space-between}
+.sec-title span{font-family:var(--body);font-size:14px;font-weight:600;color:var(--muted)}
+.flist{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.fbtn,.freq{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:8px 12px;
+}
+.fbtn:hover{background:#E6F0DC}
+.fbtn .me,.freq .me{width:56px;height:56px;padding:4px}
+.f-txt{flex:1;min-width:0}
+.f-txt b{display:block;font-family:var(--display);font-size:19px;line-height:1.15;color:var(--moss-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.f-txt span{display:block;font-size:14px;font-weight:600;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.freq .btn{min-width:0;padding:7px 12px;font-size:15px}
+.freq .acts{display:flex;gap:6px;flex:none}
+.empty{color:var(--muted);text-align:center;padding:18px 8px;background:var(--paper);border:1px dashed var(--line);border-radius:16px}
+.profile{text-align:center}
+.profile .stage{position:relative;top:auto;height:300px}
+.profile .big-name{font-family:var(--display);font-size:30px;font-weight:800;color:var(--moss-dark);margin-top:14px}
+.profile .big-title{font-size:16px;font-weight:600;color:var(--muted);margin-top:2px}
+.profile .facts{display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.profile .facts span{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:600}
+.pbtns{display:grid;gap:12px;justify-items:center;margin-top:20px}
+.pbtns .btn{min-width:200px}
+.pbtns .btn.solid{margin-top:0}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:24px;transform:translate(-50%,40px);opacity:0;
+  background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-weight:600;
+  transition:transform .25s ease,opacity .25s ease;pointer-events:none;z-index:9;
+}
+.toast.show{transform:translate(-50%,0);opacity:1}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+<div class="wrap">
+  <main id="app"></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ---------- Avatar options ---------- */
+const OPTS = {
+  skin:[["Porcelain","#F8DCC6"],["Fair","#F0C6A1"],["Sand","#D9A27C"],["Olive","#BF9266"],
+        ["Tan","#C68B5E"],["Brown","#9A6340"],["Deep","#6B4028"],["Ebony","#4A2C1E"]],
+  hairColor:[["Black","#1A1210"],["Dark brown","#3B2415"],["Brown","#6B4423"],["Auburn","#8A3B1F"],
+        ["Ginger","#C8601E"],["Blonde","#D9A441"],["Platinum","#EDE3C0"],["Grey","#A9A9AD"],
+        ["Blue","#3B6FD6"],["Pink","#E86AA6"],["Green","#3E9E5A"],["Purple","#7A4FC8"]],
+  eyeColor:[["Brown","#4B2E1E"],["Hazel","#8A6A2F"],["Green","#3E9E5A"],["Blue","#3B7BD6"],
+        ["Grey","#7C8794"],["Violet","#8A4FC8"]],
+  shirt:[["Red","#D64545"],["Orange","#E8742B"],["Yellow","#F2C12E"],["Green","#4FA36A"],
+        ["Teal","#2F9AA0"],["Blue","#3B6FB6"],["Navy","#26365A"],["Purple","#7A4FC8"],
+        ["Pink","#E86AA6"],["White","#F4F4F0"],["Grey","#6B7280"],["Black","#26282C"]],
+  pants:[["Navy","#2B3A55"],["Black","#26282C"],["Grey","#59606B"],["Khaki","#C9A66B"],
+        ["Brown","#6B4A2F"],["Olive","#5C6B3A"],["Denim","#4A6FA5"],["Maroon","#7A2B3A"]],
+  shoes:[["White","#F0F0F0"],["Black","#26282C"],["Brown","#5A3E2B"],["Red","#D64545"],
+        ["Blue","#3B6FD6"],["Green","#3E8E5A"],["Yellow","#F2C12E"],["Pink","#F08AB5"]]
+};
+const HAIR_TYPES = [["short","Short"],["curly","Curly"],["bun","Bun"],["long","Long"],["ponytail","Ponytail"],["buzz","Buzz"],["bald","Bald"]];
+const EYE_TYPES  = [["round","Round"],["wide","Wide"],["happy","Happy"],["sleepy","Sleepy"],["sparkle","Sparkle"]];
+/* ---------- Locker items: [id, name, cost in points]. Cost 0 means everyone has it. ---------- */
+const CATS = [
+  { key:"titles",  label:"Titles",         slot:"title"   },
+  { key:"glasses", label:"Glasses",        slot:"glasses" },
+  { key:"shirts",  label:"Shirts",         slot:"shirt"   },
+  { key:"pants",   label:"Pants",          slot:"pants"   },
+  { key:"hats",    label:"Hats",           slot:"hat"     },
+  { key:"borders", label:"Profile border", slot:"border"  }
+];
+const CATALOG = {
+  titles:[ ["since","Touching Grass since",0], ["rookie","Rookie Explorer",0], ["sprout","Sprout",50],
+           ["fresh","Fresh Air Fan",75], ["trail","Trail Walker",100], ["sun","Sun Chaser",150],
+           ["leaf","Leaf Spotter",150], ["dodger","Screen Dodger",250], ["grass","Grass Toucher",400],
+           ["fall2026","Fall 2026 Finisher",-1],
+           ["trailblazer","Trailblazer",300,"shop"], ["legend","Outdoor Legend",650,"shop"] ], // -1 means it can't be bought, only earned in the season
+  glasses:[ ["none","No glasses",0], ["round","Round specs",60], ["square","Square frames",60],
+            ["shades","Sunglasses",120], ["neon","Neon shades",200],
+            ["goggles","Aviator goggles",200,"shop"], ["visor","Cyber visor",300,"shop"] ],
+  shirts:[ ["tee","T-shirt",0], ["long","Long sleeve",80], ["striped","Striped tee",120],
+           ["hoodie","Hoodie",200], ["vest","Explorer vest",250],
+           ["cape","Hero cape",350,"shop"] ],
+  pants:[ ["long","Long pants",0], ["shorts","Shorts",60], ["cargo","Cargo pants",120], ["overalls","Overalls",220],
+         ["track","Track pants",250,"shop"] ],
+  hats:[ ["none","No hat",0], ["cap","Cap",80], ["beanie","Beanie",100], ["bucket","Bucket hat",140], ["sun","Sun hat",180],
+         ["headphones","Headphones",180,"shop"], ["wizard","Wizard hat",280,"shop"], ["crown","Gold crown",500,"shop"] ],
+  borders:[ ["moss","Moss",0], ["sun","Sunshine",100], ["sky","Sky",100], ["leafy","Leafy",200],
+            ["sunset","Sunset",300], ["rainbow","Rainbow",500],
+            ["inferno","Inferno",350,"shop"], ["galaxy","Galaxy",450,"shop"], ["gold","Pure gold",650,"shop"] ]
+};
+const DEFAULT_GEAR = { glasses:"none", shirt:"tee", pants:"long", hat:"none", border:"moss" };
+const BORDER_CSS = {
+  moss:"#2E5E3E", sun:"#F5B82E", sky:"#3FA0E8",
+  leafy:"repeating-conic-gradient(#2E5E3E 0 12deg,#7CC35A 12deg 24deg)",
+  sunset:"linear-gradient(135deg,#FF8A3D,#E8446B,#7A4FC8)",
+  rainbow:"conic-gradient(#ff4d4d,#ffb84d,#f2ee4d,#4dd35a,#4db8ff,#9a5dff,#ff4d4d)",
+  inferno:"conic-gradient(#FF3B1F,#FF9F1C,#FFE066,#FF9F1C,#FF3B1F,#C41E0E,#FF3B1F)",
+  galaxy:"conic-gradient(#1B1464,#6A2FB8,#2D8CFF,#B84FD6,#1B1464,#0B0A3A,#1B1464)",
+  gold:"conic-gradient(#8A6A1F,#F5D76E,#B8892B,#FFF1A8,#8A6A1F,#D9B24A,#8A6A1F)"
+};
+const ringBg = id => BORDER_CSS[id] || BORDER_CSS.moss;
+const catByKey = key => CATS.find(c=>c.key===key);
+const findItem = (catKey, id) => CATALOG[catKey].find(i=>i[0]===id);
+// Titles are a cosmetic shown under the username. Everyone starts with "since": Touching Grass since <year joined>.
+const titleName = id => {
+  const it = findItem("titles", id);
+  if(!it || id==="since") return `Touching Grass since ${state.joined || new Date().getFullYear()}`;
+  return it[1];
+};
+const itemName = (catKey, id) => catKey==="titles" ? titleName(id) : (findItem(catKey,id)||[])[1] || id;
+// Season champion titles show a gold badge next to the name.
+const BADGE_TITLES = new Set(["fall2026","legend"]);
+const BADGE_SVG = `<svg class="badge" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#F5B82E" stroke="#B9801A" stroke-width="2"/><path d="M12 6.5l1.7 3.6 3.9.5-2.9 2.7.8 3.9L12 15.3 8.5 17.2l.8-3.9-2.9-2.7 3.9-.5z" fill="#fff"/></svg>`;
+const titleHtml = id => (BADGE_TITLES.has(id) ? BADGE_SVG : "") + esc(titleName(id));
+const GROUPS = [
+  { title:"Body", rows:[ {key:"skin", label:"Skin color", kind:"color"} ] },
+  { title:"Hair", rows:[ {key:"hairType", label:"Hair type", kind:"type", list:HAIR_TYPES},
+                         {key:"hairColor", label:"Hair color", kind:"color"} ] },
+  { title:"Eyes", rows:[ {key:"eyeType", label:"Eye type", kind:"type", list:EYE_TYPES},
+                         {key:"eyeColor", label:"Eye color", kind:"color"} ] },
+  { title:"Outfit", rows:[ {key:"shirt", label:"Shirt", kind:"color"},
+                           {key:"pants", label:"Pants", kind:"color"},
+                           {key:"shoes", label:"Shoes", kind:"color"} ] }
+];
+const DEFAULT_LOOK = {
+  skin:"#C68B5E", hairType:"short", hairColor:"#3B2415",
+  eyeType:"round", eyeColor:"#4B2E1E",
+  shirt:"#4FA36A", pants:"#2B3A55", shoes:"#F0F0F0"
+};
+const REDUCED = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- 3D avatar (Three.js, built from simple shapes) ---------- */
+let R=null, scene=null, camFull=null, camHead=null, avatarGroup=null, cams={};
+
+function mat(c){ return new THREE.MeshStandardMaterial({ color:c, roughness:.8, metalness:0 }); }
+function part(geo, m, x, y, z){
+  const o = new THREE.Mesh(geo, m); o.position.set(x||0, y||0, z||0); return o;
+}
+
+function addEyes(g, look){
+  const iris = mat(look.eyeColor), dark = mat("#1F2A22"), white = mat("#FFFFFF");
+  const arcColor = new THREE.Color(look.eyeColor).lerp(new THREE.Color("#1F2A22"), .55);
+  for(const s of [-1,1]){
+    const x = s*.125, y = 1.58, z = .325;
+    const E = (geo, m, dx, dy, dz, sx, sy, sz)=>{
+      const o = part(geo, m, x+dx, y+dy, z+dz); o.scale.set(sx,sy,sz); g.add(o); return o;
+    };
+    const ball = r => new THREE.SphereGeometry(r,14,12);
+    switch(look.eyeType){
+      case "wide":
+        E(ball(.062), white, 0,0,0, 1,1.2,.55);
+        E(ball(.042), iris, 0,0,.016, 1,1.2,.5);
+        E(ball(.022), dark, 0,0,.027, 1,1.2,.5);
+        E(ball(.013), white, .014,.02,.04, 1,1,.6);
+        break;
+      case "happy": {
+        const arc = new THREE.Mesh(new THREE.TorusGeometry(.05,.014,8,16,Math.PI), mat(arcColor.getStyle()));
+        arc.position.set(x, y-.015, z+.012); g.add(arc);
+        break; }
+      case "sleepy":
+        E(ball(.05), iris, 0,-.004,0, 1,.55,.6);
+        E(ball(.026), dark, 0,-.004,.012, 1,.6,.5);
+        E(new THREE.BoxGeometry(.12,.02,.02), dark, 0,.024,.014, 1,1,1);
+        break;
+      case "sparkle":
+        E(ball(.062), iris, 0,0,0, 1,1.25,.6);
+        E(ball(.032), dark, 0,0,.016, 1,1.25,.5);
+        E(ball(.02), white, .02,.028,.036, 1,1,.6);
+        E(ball(.01), white, -.016,-.02,.034, 1,1,.6);
+        break;
+      default: // round
+        E(ball(.05), iris, 0,0,0, 1,1.25,.6);
+        E(ball(.028), dark, 0,0,.012, 1,1.25,.5);
+        E(ball(.014), white, .014,.02,.03, 1,1,.6);
+    }
+  }
+}
+
+function addGlasses(g, kind){
+  if(kind==="none") return;
+  if(kind==="goggles"){
+    const brass = mat("#B8862B");
+    const lens = new THREE.MeshStandardMaterial({ color:"#F2B84B", roughness:.2, metalness:.2, transparent:true, opacity:.55 });
+    for(const s of [-1,1]){
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(.092,.024,10,26), brass);
+      ring.position.set(s*.125,1.58,.372); g.add(ring);
+      g.add(part(new THREE.CircleGeometry(.09,24), lens, s*.125,1.58,.372));
+    }
+    g.add(part(new THREE.BoxGeometry(.08,.03,.03), brass, 0,1.585,.372));
+    // strap around the sides and back of the head, left open at the front
+    const strap = new THREE.Mesh(new THREE.TorusGeometry(.372,.02,8,40,Math.PI*2-1.3), mat("#6B4A2F"));
+    strap.rotation.x = Math.PI/2;
+    const sg = new THREE.Group(); sg.rotation.y = -(.65+Math.PI/2); sg.position.y = 1.585; sg.add(strap); g.add(sg); // turn the gap to the front
+    return;
+  }
+  if(kind==="visor"){
+    const lens = new THREE.MeshStandardMaterial({ color:"#0B3A4A", emissive:"#19E3FF", emissiveIntensity:.7, roughness:.2, transparent:true, opacity:.6 });
+    const frame = mat("#15181C");
+    g.add(part(new THREE.BoxGeometry(.5,.11,.025), lens, 0,1.585,.374));
+    g.add(part(new THREE.BoxGeometry(.52,.016,.03), frame, 0,1.645,.374));
+    g.add(part(new THREE.BoxGeometry(.52,.016,.03), frame, 0,1.525,.374));
+    for(const s of [-1,1]){
+      const arm = part(new THREE.BoxGeometry(.014,.02,.374), frame, s*.3,1.585,.2);
+      arm.rotation.y = -s*.4; g.add(arm);
+    }
+    return;
+  }
+  const round = kind==="round", dark = kind==="shades" || kind==="neon";
+  const frame = mat(kind==="neon" ? "#FF3D9A" : kind==="shades" ? "#15181C" : "#26282C");
+  const lens = new THREE.MeshStandardMaterial({
+    color: kind==="neon" ? "#2B1A4A" : dark ? "#0F1114" : "#CFE8F5",
+    roughness:.2, metalness:.1, transparent:!dark, opacity: dark ? 1 : .22
+  });
+  const y = 1.58, z = .375;
+  for(const s of [-1,1]){
+    const x = s*.125;
+    if(round){
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(.085,.013,8,26), frame);
+      ring.position.set(x,y,z); g.add(ring);
+      g.add(part(new THREE.CircleGeometry(.084,24), lens, x,y,z));
+    } else {
+      const w=.2, h=.15, t=.016;
+      g.add(part(new THREE.BoxGeometry(w,t,t), frame, x,y+h/2,z));
+      g.add(part(new THREE.BoxGeometry(w,t,t), frame, x,y-h/2,z));
+      g.add(part(new THREE.BoxGeometry(t,h,t), frame, x-w/2,y,z));
+      g.add(part(new THREE.BoxGeometry(t,h,t), frame, x+w/2,y,z));
+      g.add(part(dark ? new THREE.BoxGeometry(w,h,.02) : new THREE.PlaneGeometry(w,h), lens, x,y,z));
+    }
+    // temple arm running back to the ear
+    const arm = part(new THREE.BoxGeometry(.014,.014,.374), frame, s*.2825, y-.002, .2025);
+    arm.rotation.y = -s*.4; g.add(arm);
+  }
+  g.add(part(new THREE.BoxGeometry(.08,.014,.014), frame, 0, y+(round?.02:.05), z));
+}
+
+function addHat(g, kind){
+  if(kind==="none") return;
+  if(kind==="crown"){
+    const gold = new THREE.MeshStandardMaterial({ color:"#F2C12E", roughness:.3, metalness:.6, side:THREE.DoubleSide });
+    g.add(part(new THREE.CylinderGeometry(.27,.25,.13,24,1,true), gold, 0,1.9,0));
+    for(let i=0;i<5;i++){
+      const a = i/5*Math.PI*2;
+      const sp = part(new THREE.ConeGeometry(.05,.15,10), gold, .27*Math.sin(a), 2.02, .27*Math.cos(a)); g.add(sp);
+      g.add(part(new THREE.SphereGeometry(.022,8,6), mat(i%2?"#D64545":"#3B7BD6"), .27*Math.sin(a), 2.11, .27*Math.cos(a)));
+    }
+    const velvet = part(new THREE.SphereGeometry(.25,18,10,0,Math.PI*2,0,Math.PI/2), mat("#8A1F3A"), 0,1.9,0);
+    velvet.scale.y = .55; g.add(velvet);
+  }
+  if(kind==="wizard"){
+    const pm = mat("#5B3FA8");
+    g.add(part(new THREE.ConeGeometry(.37,.75,26), pm, 0,2.12,-.02));
+    const brimMat = new THREE.MeshStandardMaterial({ color:"#5B3FA8", roughness:.8, side:THREE.DoubleSide });
+    g.add(part(new THREE.CylinderGeometry(.62,.62,.04,32), brimMat, 0,1.75,0));
+    const band = new THREE.Mesh(new THREE.TorusGeometry(.375,.03,8,32), mat("#F2C12E"));
+    band.rotation.x = Math.PI/2; band.position.set(0,1.79,0); g.add(band);
+    for(const [x,y,z] of [[.0,2.0,.3],[.14,2.2,.2],[-.1,2.3,.12]])
+      g.add(part(new THREE.SphereGeometry(.03,8,6), mat("#F2C12E"), x,y,z));
+  }
+  if(kind==="headphones"){
+    const band = new THREE.Mesh(new THREE.TorusGeometry(.405,.024,8,32,Math.PI), mat("#26282C"));
+    band.position.set(0,1.55,0); g.add(band);
+    for(const s of [-1,1]){
+      const cup = part(new THREE.CylinderGeometry(.11,.11,.09,20), mat("#FF3D9A"), s*.4,1.54,0);
+      cup.rotation.z = Math.PI/2; g.add(cup);
+      const pad = part(new THREE.CylinderGeometry(.1,.1,.03,20), mat("#26282C"), s*.36,1.54,0);
+      pad.rotation.z = Math.PI/2; g.add(pad);
+    }
+  }
+  if(kind==="cap"){
+    // The dome sits just outside the head (radius .385 vs .36) and its front rim clears the eyes.
+    const cm = mat("#D64545");
+    const cg = new THREE.Group(); cg.position.set(0,1.644,0); cg.rotation.x = -.12;
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(.385,28,16,0,Math.PI*2,0,Math.PI*.5), cm);
+    dome.scale.y = .9; cg.add(dome);
+    const pivot = new THREE.Group(); pivot.position.set(0,0,.30); pivot.rotation.x = .2; // visor droops at the front
+    pivot.add(part(new THREE.CylinderGeometry(.46,.46,.03,28,1,false,-Math.PI/2,Math.PI), cm, 0,0,-.30));
+    cg.add(pivot);
+    g.add(cg);
+  }
+  if(kind==="beanie"){
+    const bg = new THREE.Group(); bg.position.set(0,1.6,0); bg.rotation.x = -.3;
+    bg.add(new THREE.Mesh(new THREE.SphereGeometry(.41,28,16,0,Math.PI*2,0,Math.PI*.45), mat("#3B6FD6")));
+    const cuff = new THREE.Mesh(new THREE.TorusGeometry(.405,.05,10,30), mat("#2B4F9E"));
+    cuff.rotation.x = Math.PI/2; cuff.position.y = .064; bg.add(cuff);
+    bg.add(part(new THREE.SphereGeometry(.09,14,12), mat("#FFFFFF"), 0,.43,0));
+    g.add(bg);
+  }
+  if(kind==="bucket"){
+    const m = mat("#8FA66B");
+    g.add(part(new THREE.CylinderGeometry(.37,.405,.2,28), m, 0,1.78,0));
+    const dome = part(new THREE.SphereGeometry(.37,24,10,0,Math.PI*2,0,Math.PI/2), m, 0,1.88,0);
+    dome.scale.set(1,.5,1); g.add(dome);
+    const brimMat = new THREE.MeshStandardMaterial({ color:"#8FA66B", roughness:.8, side:THREE.DoubleSide });
+    g.add(part(new THREE.CylinderGeometry(.42,.6,.06,28,1,true), brimMat, 0,1.7,0));
+  }
+  if(kind==="sun"){
+    const straw = mat("#E3C27A");
+    g.add(part(new THREE.CylinderGeometry(.36,.39,.17,28), straw, 0,1.77,0));
+    const dome = part(new THREE.SphereGeometry(.36,24,10,0,Math.PI*2,0,Math.PI/2), straw, 0,1.855,0);
+    dome.scale.set(1,.45,1); g.add(dome);
+    const brimMat = new THREE.MeshStandardMaterial({ color:"#E3C27A", roughness:.9, side:THREE.DoubleSide });
+    g.add(part(new THREE.CylinderGeometry(.4,.82,.05,36,1,true), brimMat, 0,1.69,0));
+    const ribbon = new THREE.Mesh(new THREE.TorusGeometry(.385,.02,8,32), mat("#D64545"));
+    ribbon.rotation.x = Math.PI/2; ribbon.position.y = 1.72; g.add(ribbon);
+  }
+}
+
+function buildHuman(look, gear){
+  gear = Object.assign({}, DEFAULT_GEAR, gear || {});
+  const g = new THREE.Group();
+  const skin = mat(look.skin), hair = mat(look.hairColor), top = mat(look.shirt),
+        bot = mat(look.pants), shoe = mat(look.shoes);
+  const hsl = {}; new THREE.Color(look.shirt).getHSL(hsl);
+  const pantsLight = {}; new THREE.Color(look.pants).getHSL(pantsLight);
+  const darkPants = mat(new THREE.Color(look.pants).multiplyScalar(.78).getStyle());
+  const darkShirt = mat(new THREE.Color(look.shirt).multiplyScalar(.8).getStyle());
+
+  // Ground shadow
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(.55, 28),
+    new THREE.MeshBasicMaterial({ color:0x000000, transparent:true, opacity:.14 }));
+  sh.rotation.x = -Math.PI/2; sh.position.y = .005; g.add(sh);
+
+  // Legs and shoes
+  for(const s of [-1,1]){
+    const leg = new THREE.Group(); leg.position.set(s*.13, .62, 0);
+    if(gear.pants==="shorts"){
+      leg.add(part(new THREE.CylinderGeometry(.095,.09,.5,14), skin, 0,-.25,0));
+      leg.add(part(new THREE.CylinderGeometry(.126,.12,.27,14), bot, 0,-.135,0));
+    } else {
+      leg.add(part(new THREE.CylinderGeometry(.118,.108,.5,14), bot, 0,-.25,0));
+    }
+    if(gear.pants==="track"){
+      const st = part(new THREE.BoxGeometry(.014,.5,.06), mat(pantsLight.l>.55 ? "#26282C" : "#FFFFFF"), s*.112,-.25,0);
+      leg.add(st);
+    }
+    if(gear.pants==="cargo"){
+      const pocket = part(new THREE.BoxGeometry(.09,.15,.03), darkPants, s*.093,-.17,.091);
+      pocket.rotation.y = s*.8; leg.add(pocket);
+      leg.add(part(new THREE.CylinderGeometry(.112,.112,.05,14), darkPants, 0,-.465,0));
+    }
+    const foot = part(new THREE.SphereGeometry(.12,16,12), shoe, 0,-.53,.05);
+    foot.scale.set(1,.65,1.6); leg.add(foot);
+    g.add(leg);
+  }
+
+  // Hips and torso (shirt styles change the torso, sleeves and extras)
+  g.add(part(new THREE.CylinderGeometry(.27,.27,.22,22), bot, 0,.61,0)); // stays inside the shirt above the hem
+  const hood = gear.shirt==="hoodie", longSleeve = gear.shirt==="long" || hood;
+  const k = hood ? 1.07 : 1;
+  const rAt = y => (.29 - (y-.59)*(.04/.62)) * k;
+  g.add(part(new THREE.CylinderGeometry(.25*k,.29*k,.62,22), top, 0,.9,0));
+  if(gear.shirt==="striped"){
+    const stripe = mat(hsl.l > .6 ? "#26365A" : "#FFFFFF");
+    for(const y of [.68,.82,.96,1.1]){
+      g.add(part(new THREE.CylinderGeometry(rAt(y+.03)+.004, rAt(y-.03)+.004, .06, 22), stripe, 0,y,0));
+    }
+  }
+  if(gear.shirt==="vest"){
+    const vm = new THREE.MeshStandardMaterial({ color:"#B8A06A", roughness:.85, side:THREE.DoubleSide });
+    g.add(part(new THREE.CylinderGeometry(rAt(1.17)+.016, rAt(.62)+.016, .56, 24, 1, true, .3, Math.PI*2-.6), vm, 0,.895,0));
+    const pk = mat("#8F7A48");
+    for(const s of [-1,1]) g.add(part(new THREE.BoxGeometry(.1,.1,.03), pk, s*.14,.78,rAt(.78)+.03));
+  }
+  if(gear.shirt==="cape"){
+    const cp = new THREE.MeshStandardMaterial({ color:"#C0392B", roughness:.7, side:THREE.DoubleSide });
+    g.add(part(new THREE.CylinderGeometry(.31,.42,.82,20,1,true,Math.PI-1.05,2.1), cp, 0,.82,0));
+    const cl = part(new THREE.TorusGeometry(.15,.04,8,20), cp, 0,1.215,.02); cl.rotation.x = Math.PI/2; g.add(cl);
+    g.add(part(new THREE.SphereGeometry(.036,10,8), mat("#F2C12E"), 0,1.19,.262));
+  }
+  if(hood){
+    const collar = part(new THREE.TorusGeometry(.15,.05,8,20), top, 0,1.215,.02);
+    collar.rotation.x = Math.PI/2; g.add(collar);
+    const hd = part(new THREE.SphereGeometry(.19,16,12), top, 0,1.2,-.2);
+    hd.scale.set(1.25,.95,.7); g.add(hd);
+    for(const s of [-1,1]) g.add(part(new THREE.CylinderGeometry(.009,.009,.16,6), mat("#FFFFFF"), s*.05,1.1,rAt(1.1)+.008));
+    g.add(part(new THREE.BoxGeometry(.3,.13,.03), darkShirt, 0,.74,rAt(.74)+.012));
+  }
+  if(gear.pants==="overalls"){
+    g.add(part(new THREE.BoxGeometry(.34,.3,.04), bot, 0,.96,rAt(.96)+.012));
+    const btn = mat("#F2C12E");
+    for(const s of [-1,1]){
+      g.add(part(new THREE.BoxGeometry(.06,.22,.03), bot, s*.13,1.12,rAt(1.12)+.01));
+      g.add(part(new THREE.BoxGeometry(.06,.22,.03), bot, s*.13,1.0,-(rAt(1.0)+.01)));
+      g.add(part(new THREE.BoxGeometry(.06,.03,.5), bot, s*.13,1.225,0));
+      g.add(part(new THREE.SphereGeometry(.024,10,8), btn, s*.13,1.09,rAt(1.09)+.03));
+    }
+  }
+
+  // Neck
+  g.add(part(new THREE.CylinderGeometry(.1,.11,.16,14), skin, 0,1.25,0));
+
+  // Arms
+  const sleeveL = longSleeve ? .46 : .2, sleeveR = hood ? 1.1 : 1;
+  for(const s of [-1,1]){
+    g.add(part(new THREE.SphereGeometry(.105*k,14,12), top, s*.3*k,1.12,0));
+    const arm = new THREE.Group(); arm.position.set(s*.32*k,1.13,0); arm.rotation.z = s*.12;
+    arm.add(part(new THREE.CylinderGeometry(.07,.065,.5,12), skin, 0,-.28,0));
+    arm.add(part(new THREE.CylinderGeometry(.088*sleeveR,.082*sleeveR,sleeveL,12), top, 0,-sleeveL/2,0));
+    arm.add(part(new THREE.SphereGeometry(.08,14,12), skin, 0,-.55,0));
+    g.add(arm);
+  }
+
+  // Head, ears, nose, cheeks, smile
+  const head = part(new THREE.SphereGeometry(.36,32,24), skin, 0,1.55,0);
+  head.scale.set(1,1.04,1); g.add(head);
+  const blush = new THREE.Color(look.skin).lerp(new THREE.Color("#D9534F"), .35);
+  for(const s of [-1,1]){
+    const ear = part(new THREE.SphereGeometry(.07,12,10), skin, s*.36,1.54,0);
+    ear.scale.set(.5,1,.8); g.add(ear);
+    const ch = part(new THREE.SphereGeometry(.055,10,8), mat(blush), s*.2,1.48,.285);
+    ch.scale.set(1,.7,.35); g.add(ch);
+  }
+  const nose = part(new THREE.SphereGeometry(.045,10,8), skin, 0,1.52,.35);
+  nose.scale.set(1,.9,.9); g.add(nose);
+  const smile = new THREE.Mesh(new THREE.TorusGeometry(.06,.013,8,20,Math.PI), mat("#5A2A25"));
+  smile.rotation.z = Math.PI; smile.position.set(0,1.48,.35); g.add(smile);
+
+  addEyes(g, look);
+  addGlasses(g, gear.glasses);
+
+  // Hair (the top of the hair is hidden under hats)
+  const hatOn = gear.hat !== "none";
+  const t = look.hairType;
+  if(t!=="bald"){
+    const hg = new THREE.Group(); hg.position.set(0,1.56,-.01); hg.rotation.x = -.45;
+    const buzz = t==="buzz";
+    hg.add(new THREE.Mesh(
+      new THREE.SphereGeometry(buzz?.372:.385,28,16,0,Math.PI*2,0,Math.PI*(buzz?.44:.5)), hair));
+    if(t==="short" && !hatOn){
+      const f = part(new THREE.SphereGeometry(.15,16,12), hair, .05,1.69,.26);
+      f.scale.set(1.5,.45,.8); f.rotation.z = .1; g.add(f);
+    }
+    if(t==="curly"){
+      for(const [pol, n] of [[.25,1],[.7,6],[1.1,9],[1.3,10]]){
+        if(hatOn && pol<1.2) continue;
+        for(let i=0;i<n;i++){
+          const az = n===1 ? 0 : (i/n)*Math.PI*2 + pol;
+          const x = .37*Math.sin(pol)*Math.sin(az), y = .37*Math.cos(pol), z = .37*Math.sin(pol)*Math.cos(az);
+          if(pol>.9 && z>.08) continue; // keep the face clear
+          hg.add(part(new THREE.SphereGeometry(.13,12,10), hair, x,y,z));
+        }
+      }
+    }
+    if(t==="bun" && !hatOn) hg.add(part(new THREE.SphereGeometry(.15,16,12), hair, 0,.4,-.14));
+    g.add(hg);
+    if(t==="long"){
+      const back = part(new THREE.SphereGeometry(.38,20,16), hair, 0,1.25,-.2);
+      back.scale.set(1,1.6,.55); g.add(back);
+    }
+    if(t==="ponytail"){
+      const tail = part(new THREE.SphereGeometry(.11,14,12), hair, 0,1.4,-.47);
+      tail.scale.set(1,2.6,1); tail.rotation.x = -.25; g.add(tail);
+      const band = new THREE.Mesh(new THREE.TorusGeometry(.075,.025,8,16), mat("#E86AA6"));
+      band.position.set(0,1.62,-.4); band.rotation.x = Math.PI/2 - .5; g.add(band);
+    }
+  }
+  addHat(g, gear.hat);
+  return g;
+}
+
+function disposeGroup(g){
+  g.traverse(o=>{
+    if(o.geometry) o.geometry.dispose();
+    if(o.material) o.material.dispose();
+  });
+}
+function setAvatar(){ // rebuilds the 3D avatar from the saved look and equipped items
+  if(!HAS3D) return;
+  if(avatarGroup){ scene.remove(avatarGroup); disposeGroup(avatarGroup); }
+  avatarGroup = buildHuman(getLook(), getGear());
+  scene.add(avatarGroup);
+}
+
+function init3D(){
+  if(!window.THREE) return false;
+  try{
+    R = new THREE.WebGLRenderer({ antialias:true, alpha:true, preserveDrawingBuffer:true });
+    R.setPixelRatio(1); R.setSize(480,480,false); R.setClearColor(0x000000,0);
+    scene = new THREE.Scene();
+    scene.add(new THREE.HemisphereLight(0xFFFFFF,0xCFD8C0,.85));
+    const key = new THREE.DirectionalLight(0xFFFFFF,.75); key.position.set(2,4,3); scene.add(key);
+    const fill = new THREE.DirectionalLight(0xFFF2D6,.25); fill.position.set(-3,1,2); scene.add(fill);
+    camFull = new THREE.PerspectiveCamera(30,1,.1,50);
+    camFull.position.set(0,1.02,4.8); camFull.lookAt(0,1.0,0);
+    camHead = new THREE.PerspectiveCamera(30,1,.1,50);
+    camHead.position.set(0,1.5,2.5); camHead.lookAt(0,1.47,0);
+    // Framing for the small previews in the Locker
+    const mk = (y, z) => { const c = new THREE.PerspectiveCamera(30,1,.1,50); c.position.set(0,y,z); c.lookAt(0,y,0); return c; };
+    cams = { head:camHead, tall:mk(1.72,3.9), bust:mk(1.55,3.4), torso:mk(1.15,3.3), legs:mk(.62,3.3), full:camFull };
+    return true;
+  }catch(e){ return false; }
+}
+const HAS3D = init3D();
+
+/* Flat stand-in when 3D isn't available */
+function fallbackSvg(look){
+  const hairShape = look.hairType==="bald" ? "" :
+    `<path d="M26 44 Q26 14 50 14 Q74 14 74 44 Q64 30 50 30 Q36 30 26 44Z" fill="${look.hairColor}"/>`;
+  return `<svg viewBox="0 0 100 100" role="img" aria-label="Your avatar" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="98" rx="34" ry="26" fill="${look.shirt}"/>
+    <circle cx="50" cy="46" r="24" fill="${look.skin}"/>${hairShape}
+    <circle cx="41" cy="48" r="4" fill="${look.eyeColor}"/><circle cx="59" cy="48" r="4" fill="${look.eyeColor}"/>
+    <path d="M42 58 Q50 65 58 58" fill="none" stroke="#5A2A25" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>`;
+}
+function avatarView(mode, size){
+  if(HAS3D) return `<canvas data-avatar data-mode="${mode}" width="${size}" height="${size}" role="img" aria-label="Your avatar"></canvas>`;
+  return fallbackSvg(getLook());
+}
+
+/* Rotation: drag the full view to turn the avatar; it sways gently when left alone */
+let userYaw = .3, swayAmp = 1, lastInteract = -1e9, drag = null;
+function draw(t){
+  if(!HAS3D || !avatarGroup) return;
+  const views = document.querySelectorAll("canvas[data-avatar]");
+  if(!views.length) return;
+  const idle = !drag && t - lastInteract > 2000;
+  swayAmp += ((idle?1:0) - swayAmp) * .06;
+  views.forEach(cv=>{
+    const headShot = cv.dataset.mode==="head";
+    avatarGroup.rotation.y = headShot
+      ? (REDUCED ? .2 : Math.sin(t/900)*.35)
+      : userYaw + (REDUCED ? 0 : Math.sin(t/1400)*.5*swayAmp);
+    avatarGroup.position.y = REDUCED ? 0 : Math.sin(t/450)*.012;
+    R.render(scene, headShot ? camHead : camFull);
+    const ctx = cv.getContext("2d");
+    ctx.imageSmoothingQuality = "high";
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.drawImage(R.domElement,0,0,cv.width,cv.height);
+  });
+}
+setInterval(()=>{
+  if(finishChallenges()) render();
+  document.querySelectorAll("[data-countdown]").forEach(el=>{
+    const [k, id] = el.dataset.countdown.split(":"), a = activeFor(k, id);
+    if(!a) return;
+    const l = leftMs(a);
+    if(l <= 0){ render(); toast("Timer done! Tap Complete."); }
+    else el.textContent = fmtLeft(l);
+  });
+}, 1000);
+function loop(t){ draw(t); requestAnimationFrame(loop); }
+
+/* ---------- Quests ---------- */
+const DAILY_POOL = [
+  { id:"d1",  title:"Go outside for 5 minutes", pts:10 },
+  { id:"d2",  title:"Take a 10-minute walk", pts:10 },
+  { id:"d3",  title:"Eat a snack or meal outside", pts:10 },
+  { id:"d4",  title:"Snap a photo of something cool outside", pts:10 },
+  { id:"d5",  title:"Listen to a song or podcast outside", pts:10 },
+  { id:"d6",  title:"Sit outside and chill for 10 minutes", pts:10 },
+  { id:"d7",  title:"Walk or bike somewhere instead of getting a ride", pts:15 },
+  { id:"d8",  title:"Shoot hoops, kick a ball or toss a frisbee for 10 minutes", pts:15 },
+  { id:"d9",  title:"Watch the sunrise or sunset", pts:15 },
+  { id:"d10", title:"Stretch or work out outside for 10 minutes", pts:15 },
+  { id:"d11", title:"Take a 20-minute walk", pts:15 },
+  { id:"d12", title:"Pick up 5 pieces of trash", pts:10 },
+  { id:"d13", title:"Find a new spot outside to hang out", pts:10 },
+  { id:"d14", title:"Call or FaceTime a friend while you walk", pts:15 },
+  { id:"d15", title:"Do homework or read outside for 20 minutes", pts:15 },
+  { id:"d16", title:"Spot 3 different birds, bugs or plants", pts:10 }
+];
+const WEEKLY_POOL = [
+  { id:"w1",  title:"Spend 2 hours outside in total", pts:50 },
+  { id:"w2",  title:"Check out a park, trail or spot you've never been to", pts:60 },
+  { id:"w3",  title:"Hang out with a friend outside instead of gaming", pts:50 },
+  { id:"w4",  title:"Go for a walk with a friend or family member", pts:40 },
+  { id:"w5",  title:"Eat a meal or have a picnic outside", pts:40 },
+  { id:"w6",  title:"Try something new outside, like skating, frisbee golf or climbing", pts:70 },
+  { id:"w7",  title:"Go outside on 5 different days", pts:50 },
+  { id:"w8",  title:"Play a pickup game or sport outside", pts:50 },
+  { id:"w9",  title:"Watch a sunset with someone", pts:40 },
+  { id:"w10", title:"Spend a whole afternoon outside", pts:60 },
+  { id:"w11", title:"Take a photo walk and send your best pic to a friend", pts:40 }
+];
+const SEASON = {
+  id:"fall-2026", name:"Fall 2026", end:new Date(2026,11,21,23,59,59),
+  quests:[
+    { id:"s1", title:"Watch 5 sunsets", target:5, pts:120 },
+    { id:"s2", title:"Visit 3 new parks or trails", target:3, pts:150 },
+    { id:"s3", title:"Photograph 10 different fall leaves", target:10, pts:100 },
+    { id:"s4", title:"Go on a 1-hour hike or long walk", target:1, pts:150 },
+    { id:"s5", title:"Spend a whole afternoon outside with friends", target:1, pts:200 },
+    { id:"s6", title:"Finish 20 daily quests", target:20, pts:250, auto:"dailies" },
+    { id:"s7", title:"Complete every season quest", target:6, pts:0, auto:"season" }
+  ],
+  titleId:"fall2026" // the champion title, with a badge, for finishing all the quests above
+};
+
+/* Anti-cheat: every quest has a minimum time. Tap Start, do it, and Complete unlocks when the timer ends.
+   Only one quest can run at a time, so they can't all be finished in one tap-fest. */
+const MINS = { d1:5,d2:10,d3:10,d4:5,d5:5,d6:10,d7:10,d8:10,d9:10,d10:10,d11:20,d12:5,d13:5,d14:10,d15:20,d16:5,
+  w1:60,w2:30,w3:30,w4:20,w5:30,w6:30,w7:10,w8:30,w9:20,w10:60,w11:20,
+  s1:10,s2:20,s3:10,s4:60,s5:90 };
+const minsFor = id => MINS[id] || 10;
+const ONCE_A_DAY = new Set(["s1","s2"]); // sunsets and new parks: one log per day
+
+/* ---------- Helpers ---------- */
+const pad = n => String(n).padStart(2,"0");
+const dayKey = (d=new Date()) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+function weekKey(){
+  const d = new Date();
+  d.setDate(d.getDate() - ((d.getDay()+6) % 7)); // Monday start
+  return dayKey(d);
+}
+function hash(s){ let h=2166136261; for(const c of s){ h^=c.charCodeAt(0); h=Math.imul(h,16777619); } return h>>>0; }
+function rng(seed){
+  return function(){
+    seed|=0; seed=seed+0x6D2B79F5|0;
+    let t=Math.imul(seed^seed>>>15,1|seed);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+}
+function pick(pool,key,n){
+  const r = rng(hash(key)), a = pool.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a.slice(0,n);
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- State ---------- */
+const KEY = "touch-grass-v1";
+function fresh(){
+  return { username:null, joined:null, title:"since", look:null, gear:{}, owned:[], points:0,
+    daily:{key:"",done:[]}, weekly:{key:"",done:[]},
+    season:{id:SEASON.id,counts:{},claimed:[]},
+    friendCode:null, friends:[], requests:[], friendsSeeded:false, active:null, earnedTotal:null, challenges:[], paid:{} };
+}
+let state;
+try { state = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || "{}")); } catch(e){ state = fresh(); }
+delete state.avatar; // from earlier versions with preset characters
+if(state.username && !state.joined) state.joined = new Date().getFullYear(); // accounts made before join years were tracked
+function getLook(){ return Object.assign({}, DEFAULT_LOOK, state.look || {}); }
+function getGear(){ return Object.assign({}, DEFAULT_GEAR, state.gear || {}); }
+function isOwned(slot, id){
+  const cat = CATS.find(c=>c.slot===slot), item = findItem(cat.key, id);
+  return !!item && (item[2]===0 || state.owned.includes(slot+":"+id));
+}
+// Titles used to be free to pick, so keep whichever one someone already has equipped.
+if(state.title && !isOwned("title", state.title) && findItem("titles", state.title)) state.owned.push("title:"+state.title);
+if(!findItem("titles", state.title)) state.title = "since";
+function save(noCloud){
+  if(!noCloud && typeof cloud !== "undefined" && cloud.session){ state.dirty = true; queueCloudSave(); }
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+}
+/* ---------- Online settings (Supabase) ----------
+   The game works fine without this. Paste your project's URL and public "anon" key to turn on
+   shared events like double points. Only an admin account can change them (the database enforces it). */
+const SUPABASE_URL = "https://uuwpeaohjowjbvuaixow.supabase.co";       // like "https://abcdxyz.supabase.co"
+const SUPABASE_ANON_KEY = "sb_publishable_kfHL0EsH7ykzqOhIxflPig_tCMJGCp8";  // the Publishable key (sb_publishable_...) from Project Settings > API Keys
+const ONLINE = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+let eventSettings = { mult:1, until:null, banner:"" };
+let adminSession = null;
+try { adminSession = JSON.parse(sessionStorage.getItem("questopia-admin") || "null"); } catch(e){}
+// New "sb_publishable_" keys are not JWTs, so they go in apikey only. Old anon keys also go in Authorization.
+const sbHeaders = tok => {
+  const h = { apikey:SUPABASE_ANON_KEY, "Content-Type":"application/json" };
+  if(tok) h.Authorization = "Bearer " + tok;
+  else if(!/^sb_/.test(SUPABASE_ANON_KEY)) h.Authorization = "Bearer " + SUPABASE_ANON_KEY;
+  return h;
+};
+async function loadEvent(){
+  if(!ONLINE) return false;
+  try{
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/settings?id=eq.1&select=points_multiplier,until,banner`, { headers:sbHeaders() });
+    if(!r.ok) return false;
+    const rows = await r.json();
+    if(Array.isArray(rows) && rows[0]){
+      const row = rows[0];
+      eventSettings = { mult:Math.min(5, Math.max(1, Number(row.points_multiplier)||1)), until:row.until ? Date.parse(row.until) : null, banner:row.banner||"" };
+    }
+    return true;
+  }catch(e){ return false; }
+}
+// 1 when no event is running, otherwise the bonus multiplier (until the end time, if there is one)
+function eventMult(){
+  const e = eventSettings;
+  return e.mult > 1 && (!e.until || Date.now() < e.until) ? e.mult : 1;
+}
+const payFor = base => Math.round(base * eventMult());
+const payKey = (kind, id) => kind==="season" ? "season:"+id : `${kind}:${id}:${kind==="daily" ? state.daily.key : state.weekly.key}`;
+/* ---------- Accounts (Google / Apple sign-in through Supabase) ----------
+   Signing in saves your progress online so it follows you to any device. The game still works without it. */
+const PROVIDERS = { google:true, apple:false }; // switch Apple on after setting it up in Supabase
+let cloud = { session:null, status:"", conflict:null, busy:false, timer:null };
+try { cloud.session = JSON.parse(localStorage.getItem("questopia-session") || "null"); } catch(e){}
+function storeSession(){ try{ cloud.session ? localStorage.setItem("questopia-session", JSON.stringify(cloud.session)) : localStorage.removeItem("questopia-session"); }catch(e){} }
+const siteUrl = () => location.origin + location.pathname;
+function signInWith(provider){ if(ONLINE) location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(siteUrl())}`; }
+async function userToken(){
+  const ses = cloud.session; if(!ses) return null;
+  if(ses.expires_at && Date.now()/1000 > ses.expires_at - 60){
+    try{
+      const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, { method:"POST",
+        headers:{ apikey:SUPABASE_ANON_KEY, "Content-Type":"application/json" }, body:JSON.stringify({ refresh_token:ses.refresh_token }) });
+      const j = await r.json();
+      if(!r.ok || !j.access_token) throw new Error("refresh failed");
+      cloud.session = Object.assign({}, ses, { access_token:j.access_token, refresh_token:j.refresh_token || ses.refresh_token,
+        expires_at: j.expires_at || Math.floor(Date.now()/1000) + (j.expires_in || 3600) });
+      storeSession();
+    }catch(e){ cloud.session = null; storeSession(); return null; }
+  }
+  return cloud.session.access_token;
+}
+async function sbFetch(path, opts){
+  const tok = await userToken(); if(!tok) throw new Error("signed out");
+  opts = opts || {};
+  return fetch(`${SUPABASE_URL}${path}`, Object.assign({}, opts, { headers:Object.assign(sbHeaders(tok), opts.headers || {}) }));
+}
+const hasProgress = () => !!state.username && ((state.earnedTotal||0) > 0 || state.owned.length > 0 || state.friends.length > 1);
+async function getCloudRow(){
+  const r = await sbFetch(`/rest/v1/profiles?select=username,friend_code,state,updated_at&user_id=eq.${cloud.session.user.id}`);
+  if(!r.ok) throw new Error("load failed");
+  const rows = await r.json();
+  return rows[0] || null;
+}
+async function pushCloud(){
+  if(!cloud.session || cloud.busy || cloud.conflict) return;
+  cloud.busy = true;
+  try{
+    for(let i=0; i<6; i++){
+      const ts = new Date().toISOString();
+      const body = Object.assign({}, state); delete body.dirty; delete body.syncedAt;
+      const r = await sbFetch(`/rest/v1/profiles?on_conflict=user_id`, { method:"POST",
+        headers:{ Prefer:"resolution=merge-duplicates,return=minimal" },
+        body:JSON.stringify({ user_id:cloud.session.user.id, username:state.username, friend_code:state.friendCode, state:body, updated_at:ts }) });
+      if(r.status===409){ state.friendCode = makeCode(); save(true); continue; } // friend code already taken
+      if(r.ok){ state.syncedAt = ts; state.dirty = false; save(true); cloud.status = "Saved online"; cloud.savedAt = Date.now(); }
+      else cloud.status = "Couldn't save online";
+      break;
+    }
+  }catch(e){ cloud.status = "Couldn't save online"; }
+  cloud.busy = false;
+  if(inAccount) render();
+}
+function queueCloudSave(){ clearTimeout(cloud.timer); cloud.timer = setTimeout(pushCloud, 4000); }
+// Replace this device's save with the online one
+function adoptCloud(row){
+  const cs = Object.assign({}, row.state, { dirty:false, syncedAt:row.updated_at });
+  try{ localStorage.setItem(KEY, JSON.stringify(cs)); }catch(e){}
+  location.reload();
+}
+// Check the online save: load it, upload ours, or ask which to keep
+async function syncCloud(){
+  if(!ONLINE || !cloud.session) return;
+  try{
+    const row = await getCloudRow();
+    if(!row || !row.state || !row.state.username){ if(state.username) await pushCloud(); return; }
+    const same = state.syncedAt && Date.parse(row.updated_at) === Date.parse(state.syncedAt);
+    if(same){ if(state.dirty) await pushCloud(); return; }
+    if(!hasProgress() || (state.syncedAt && !state.dirty)) return adoptCloud(row);
+    cloud.conflict = { row }; inAccount = true; render();
+  }catch(e){ cloud.status = "Couldn't reach the online save"; }
+}
+// Back from Google/Apple: the address holds the sign-in tokens
+async function handleOAuthReturn(){
+  if(!ONLINE || !/access_token|error_description/.test(location.hash)) return;
+  const p = new URLSearchParams(location.hash.slice(1));
+  history.replaceState(null, "", location.pathname + location.search);
+  const at = p.get("access_token");
+  if(!at){ cloud.status = "Sign-in didn't finish. Try again."; inAccount = true; return; }
+  try{
+    const u = await (await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers:sbHeaders(at) })).json();
+    const meta = u.user_metadata || {};
+    cloud.session = { access_token:at, refresh_token:p.get("refresh_token"),
+      expires_at:+p.get("expires_at") || Math.floor(Date.now()/1000) + (+p.get("expires_in") || 3600),
+      user:{ id:u.id, email:u.email, name:meta.full_name || meta.name || u.email } };
+    storeSession();
+    inAccount = true;
+    await syncCloud();
+    if(!cloud.conflict) cloud.status = "Saved online";
+  }catch(e){ cloud.status = "Sign-in didn't finish. Try again."; inAccount = true; }
+}
+function signOut(){ cloud.session = null; cloud.conflict = null; cloud.status = ""; storeSession(); state.dirty = false; save(true); }
+let inAccount = false;
+function accountView(){
+  const back = `<div class="locker-top"><button class="backlink" data-act="close-account">‹ Quests</button><h2>Account</h2></div>`;
+  if(!ONLINE) return `<section class="account">${back}<p class="demo-note">Online accounts aren't set up yet.</p></section>`;
+  if(cloud.conflict){
+    const cs = cloud.conflict.row.state;
+    return `<section class="account">${back}
+      <p class="demo-note">Your online save and this device are different. Which one do you want to keep?</p>
+      <div class="group"><h3>Online save</h3><p>${esc(cs.username||"Player")} · ${cs.points||0} points</p>
+        <button class="btn solid" data-act="use-cloud">Use online save</button></div>
+      <div class="group"><h3>This device</h3><p>${esc(state.username||"Player")} · ${state.points} points</p>
+        <button class="btn" data-act="use-local">Use this device</button></div></section>`;
+  }
+  const ses = cloud.session;
+  if(!ses) return `<section class="account">${back}
+    <div class="group"><h3>Save your progress online</h3>
+      <p>Sign in to keep your points and looks safe and to play on any device.</p>
+      ${PROVIDERS.google ? `<button class="btn solid wide" data-act="sign-in" data-provider="google">Continue with Google</button>` : ""}
+      ${PROVIDERS.apple ? `<button class="btn wide" data-act="sign-in" data-provider="apple">Continue with Apple</button>` : ""}
+      ${cloud.status ? `<p class="err">${esc(cloud.status)}</p>` : ""}
+      <p class="fine">Under 13? Ask a parent or guardian first. We keep your game progress and the name and email your sign-in shares.</p>
+    </div></section>`;
+  return `<section class="account">${back}
+    <div class="group"><h3>Signed in</h3>
+      <p>${esc(ses.user.name || ses.user.email || "Player")}${ses.user.email && ses.user.name!==ses.user.email ? `<br><span class="fine">${esc(ses.user.email)}</span>` : ""}</p>
+      <p class="stat">${esc(cloud.status || (state.dirty ? "Saving soon..." : "Saved online"))}</p>
+      <button class="btn solid wide" data-act="save-now">Save now</button>
+      <button class="btn wide" data-act="sign-out">Sign out</button>
+    </div>
+    <p class="note">Signing out keeps your progress on this device.</p></section>`;
+}
+function ensureFresh(){
+  if(state.daily.key !== dayKey()) state.daily = { key:dayKey(), done:[] };
+  if(state.weekly.key !== weekKey()) state.weekly = { key:weekKey(), done:[] };
+  if(!state.season || state.season.id !== SEASON.id) state.season = { id:SEASON.id, counts:{}, claimed:[] };
+  // forget payout records for days and weeks that are over
+  state.paid = state.paid || {};
+  for(const k of Object.keys(state.paid)){
+    const [kind,, key] = k.split(":");
+    if((kind==="daily" && key!==state.daily.key) || (kind==="weekly" && key!==state.weekly.key)) delete state.paid[k];
+  }
+  save();
+}
+/* Friends (demo): your code is made once. Practice players stand in for real ones until there's an online account system. */
+const CODE_CHARS = "ABCDEFGHJKLMNPRSTUVWXYZ23456789";
+function makeCode(){
+  const pick1 = () => CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)];
+  return Array.from({length:4},pick1).join("") + "-" + Array.from({length:4},pick1).join("");
+}
+/* TEST_MODE: fake players so the Friends screen can be tried out. Set to false before real launch. */
+const TEST_MODE = true;
+const SAMPLE_PLAYERS = !TEST_MODE ? [] : [
+  { code:"TEST-FRND", name:"Test Jordan", title:"since", joined:2024,
+    look:{ skin:"#D9A27C", hairType:"short", hairColor:"#6B4423", eyeType:"round", eyeColor:"#7C8794", shirt:"#3B6FB6", pants:"#C9A66B", shoes:"#5A3E2B" },
+    gear:{ pants:"cargo", hat:"beanie", border:"leafy" },
+    owned:["title:sprout","title:trail","glasses:round","shirt:hoodie","pants:shorts","hat:cap","border:sun","border:sky"] },
+  { code:"TEST-RQ01", name:"Test Riley", title:"sprout", joined:2025,
+    look:{ skin:"#F0C6A1", hairType:"ponytail", hairColor:"#C8601E", eyeType:"happy", eyeColor:"#3E9E5A", shirt:"#E8742B", pants:"#4A6FA5", shoes:"#F0F0F0" },
+    gear:{ hat:"cap", border:"sun" }, owned:["title:sprout","hat:beanie","border:sun"] },
+  { code:"TEST-RQ02", name:"Test Maya", title:"trail", joined:2026,
+    look:{ skin:"#6B4028", hairType:"curly", hairColor:"#1A1210", eyeType:"sparkle", eyeColor:"#4B2E1E", shirt:"#7A4FC8", pants:"#26282C", shoes:"#E86AA6" },
+    gear:{ glasses:"round", shirt:"hoodie", border:"sky" } },
+  { code:"TEST-RQ03", name:"Test Sam", title:"grass", joined:2025,
+    look:{ skin:"#F8DCC6", hairType:"buzz", hairColor:"#3B2415", eyeType:"sleepy", eyeColor:"#3B7BD6", shirt:"#4FA36A", pants:"#5C6B3A", shoes:"#26282C" },
+    gear:{ glasses:"shades", shirt:"vest", pants:"shorts", border:"rainbow" } },
+  { code:"TEST-RQ04", name:"Test Alex", title:"fresh", joined:2026,
+    look:{ skin:"#9A6340", hairType:"bun", hairColor:"#3E9E5A", eyeType:"wide", eyeColor:"#8A6A2F", shirt:"#D64545", pants:"#2B3A55", shoes:"#F2C12E" },
+    gear:{ hat:"bucket", border:"sunset" } }
+];
+const samplePlayer = code => SAMPLE_PLAYERS.find(p=>p.code===code);
+if(!state.friendCode) state.friendCode = makeCode();
+// Earlier builds added practice players; drop them so only real friends and requests ever show.
+state.friends = state.friends.filter(samplePlayer);
+state.requests = state.requests.filter(samplePlayer);
+if(TEST_MODE && !state.testSeeded){ // one test friend and one test request to start with
+  state.testSeeded = true;
+  if(!state.friends.includes("TEST-FRND")) state.friends.push("TEST-FRND");
+  if(!state.requests.includes("TEST-RQ01") && !state.friends.includes("TEST-RQ01")) state.requests.push("TEST-RQ01");
+}
+if(state.earnedTotal == null) state.earnedTotal = state.points;
+ensureFresh();
+checkSeasonComplete(true); // sync the champion title with saved progress without a pop-up
+save();
+setAvatar(getLook());
+
+let tab = "daily";
+let editing = !state.look;
+
+/* ---------- Actions ---------- */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 1800);
+}
+function seasonQuestIds(){ return SEASON.quests.filter(q=>q.auto!=="season").map(q=>q.id); }
+function seasonDoneCount(){ return seasonQuestIds().filter(id=>state.season.claimed.includes(id)).length; }
+// Finishing every season quest earns the season's champion title (kept for good once earned).
+function checkSeasonComplete(quiet){
+  const key = "title:"+SEASON.titleId;
+  if(seasonDoneCount() === seasonQuestIds().length && !state.owned.includes(key)){
+    state.owned.push(key);
+    if(!quiet) toast(`${SEASON.name} complete! New title unlocked.`);
+  }
+}
+function bumpSeason(id, delta){
+  const q = SEASON.quests.find(x=>x.id===id); if(!q || q.auto==="season") return;
+  const s = state.season;
+  s.counts[id] = Math.max(0, Math.min(q.target, (s.counts[id]||0) + delta));
+  const claimed = s.claimed.includes(id);
+  if(s.counts[id] >= q.target && !claimed){
+    const amt = payFor(q.pts);
+    state.paid["season:"+id] = amt; addPoints(amt);
+    toast(`Season quest done! +${amt}`);
+    checkSeasonComplete();
+  } else if(s.counts[id] < q.target && claimed){
+    s.claimed = s.claimed.filter(x=>x!==id);
+    addPoints(-(state.paid["season:"+id] ?? q.pts)); delete state.paid["season:"+id];
+  }
+}
+// Points from quests also count toward challenges (earnedTotal never goes down when you spend points).
+function addPoints(n){
+  state.points = Math.max(0, state.points + n);
+  state.earnedTotal = (state.earnedTotal||0) + n;
+}
+function qInfo(kind, id){
+  return kind==="season" ? SEASON.quests.find(q=>q.id===id) : (kind==="daily"?DAILY_POOL:WEEKLY_POOL).find(q=>q.id===id);
+}
+const bucketKey = kind => kind==="daily" ? state.daily.key : kind==="weekly" ? state.weekly.key : SEASON.id;
+// The running quest, or null. A quest from an earlier day, week or season is dropped.
+function runningQuest(){
+  const a = state.active;
+  if(a && a.key !== bucketKey(a.kind)){ state.active = null; return null; }
+  return a || null;
+}
+function activeFor(kind, id){ const a = runningQuest(); return a && a.kind===kind && a.id===id ? a : null; }
+function leftMs(a){
+  const now = Date.now();
+  if(a.start > now){ a.start = now; save(); } // clock set backwards: the timer restarts instead of finishing early
+  return Math.max(0, a.start + a.mins*60000 - now);
+}
+function fmtLeft(ms){
+  const t = Math.ceil(ms/1000), h = Math.floor(t/3600), m = Math.floor(t%3600/60), sec = t%60;
+  return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+function startQuest(kind, id){
+  const q = qInfo(kind, id); if(!q) return;
+  const cur = runningQuest();
+  if(cur){ const cq = qInfo(cur.kind, cur.id); toast(`Finish or cancel "${cq?cq.title:"your quest"}" first.`); return; }
+  if(kind==="season" && ONCE_A_DAY.has(id) && (state.season.last||{})[id]===dayKey()){ toast("Nice! Come back tomorrow for the next one."); return; }
+  state.active = { kind, id, key:bucketKey(kind), start:Date.now(), mins:minsFor(id) };
+  save(); render();
+}
+function cancelQuest(){ state.active = null; save(); render(); }
+// Returns true when the timer for this quest is up; otherwise says why not.
+function timerDone(kind, id){
+  const a = activeFor(kind, id);
+  if(!a){ toast("Tap Start first."); return false; }
+  if(leftMs(a) > 0){ toast("Keep going! The timer isn't done yet."); return false; }
+  return true;
+}
+function questButton(kind, id, done, logAct){
+  const act = logAct ? "log" : "toggle";
+  if(done) return logAct
+    ? `<button class="btn" disabled>Done</button>`
+    : `<button class="btn" data-act="toggle" data-kind="${kind}" data-id="${id}" aria-pressed="true">Done</button>`;
+  const a = activeFor(kind, id);
+  if(!a) return `<button class="btn" data-act="start" data-kind="${kind}" data-id="${id}">Start</button>`;
+  const l = leftMs(a);
+  if(l > 0) return `<button class="btn timer" disabled data-countdown="${kind}:${id}" aria-label="Time left">${fmtLeft(l)}</button>`;
+  return `<button class="btn solid" data-act="${act}" data-kind="${kind}" data-id="${id}">Complete</button>`;
+}
+function questMeta(kind, q){
+  const a = activeFor(kind, q.id);
+  return `<span>${minsFor(q.id)>=60 ? minsFor(q.id)/60+" hr" : minsFor(q.id)+" min"}</span>` +
+    (a ? `<button class="linkbtn" data-act="cancel">Cancel</button>` : "");
+}
+function toggle(kind, id){
+  const pool = kind==="daily" ? DAILY_POOL : WEEKLY_POOL;
+  const q = pool.find(x=>x.id===id); if(!q) return;
+  const bucket = state[kind];
+  if(bucket.done.includes(id)){
+    // Undoing takes the points back, so it isn't allowed once they've been spent in the Locker.
+    const pk = payKey(kind, id), paid = state.paid[pk] ?? q.pts;
+    let back = paid;
+    const s6 = SEASON.quests.find(x=>x.id==="s6");
+    if(kind==="daily" && state.season.claimed.includes("s6") && (state.season.counts.s6||0) >= s6.target) back += state.paid["season:s6"] ?? s6.pts;
+    if(state.points < back){ toast("Those points are already spent."); return; }
+    bucket.done = bucket.done.filter(x=>x!==id);
+    addPoints(-paid); delete state.paid[pk];
+    if(kind==="daily") bumpSeason("s6",-1);
+  } else {
+    if(!timerDone(kind, id)) return;
+    state.active = null;
+    bucket.done.push(id);
+    const amt = payFor(q.pts);
+    state.paid[payKey(kind, id)] = amt;
+    addPoints(amt);
+    toast(amt > q.pts ? `+${amt} points (${eventMult()}x bonus!)` : `+${amt} points`);
+    if(kind==="daily") bumpSeason("s6",1);
+  }
+  save(); render();
+}
+
+/* Changing a look updates the 3D model right away, without redrawing the page */
+function setLookValue(key, val){
+  state.look = Object.assign(getLook(), { [key]: val });
+  save(); setAvatar(state.look); updateEditorUI(); draw(performance.now());
+}
+function randomLook(){
+  const pickOne = list => list[Math.floor(Math.random()*list.length)];
+  state.look = {
+    skin: pickOne(OPTS.skin)[1], hairType: pickOne(HAIR_TYPES)[0], hairColor: pickOne(OPTS.hairColor)[1],
+    eyeType: pickOne(EYE_TYPES)[0], eyeColor: pickOne(OPTS.eyeColor)[1],
+    shirt: pickOne(OPTS.shirt)[1], pants: pickOne(OPTS.pants)[1], shoes: pickOne(OPTS.shoes)[1]
+  };
+  save(); setAvatar(state.look); updateEditorUI(); draw(performance.now());
+}
+function updateEditorUI(){
+  const look = getLook();
+  document.querySelectorAll('[data-act="set"]').forEach(b=>{
+    b.setAttribute("aria-pressed", String(String(look[b.dataset.key]).toLowerCase() === b.dataset.val.toLowerCase()));
+  });
+  document.querySelectorAll("label.custom").forEach(l=>{
+    const key = l.dataset.key, v = String(look[key]).toLowerCase();
+    const inPalette = OPTS[key].some(p=>p[1].toLowerCase()===v);
+    l.classList.toggle("active", !inPalette);
+    l.style.background = inPalette ? "" : v;
+    l.querySelector("input").value = v;
+  });
+}
+
+/* ---------- Views ---------- */
+function rowHtml(r){
+  if(r.kind==="type"){
+    return `<div class="row"><p class="row-label" id="l-${r.key}">${r.label}</p>
+      <div class="chips" role="group" aria-labelledby="l-${r.key}">
+        ${r.list.map(([v,n])=>`<button class="chip" data-act="set" data-key="${r.key}" data-val="${v}" aria-pressed="false">${n}</button>`).join("")}
+      </div></div>`;
+  }
+  return `<div class="row"><p class="row-label" id="l-${r.key}">${r.label}</p>
+    <div class="swatches" role="group" aria-labelledby="l-${r.key}">
+      ${OPTS[r.key].map(([n,c])=>`<button class="sw" style="background:${c}" data-act="set" data-key="${r.key}" data-val="${c}" aria-label="${n}" title="${n}" aria-pressed="false"></button>`).join("")}
+      <label class="sw custom" data-key="${r.key}" title="Pick your own color"><span class="sr">Custom ${r.label.toLowerCase()}</span><input type="color" data-key="${r.key}" value="#888888"></label>
+    </div></div>`;
+}
+
+/* Usernames: 3 to 20 letters, numbers or underscores. Stored on this device only. */
+function nameCheck(raw){
+  const v = String(raw).trim().replace(/^@/, "");
+  if(!/^[A-Za-z0-9_]{3,20}$/.test(v)) return { ok:false, msg:"Use 3 to 20 letters, numbers or underscores." };
+  return { ok:true, value:v };
+}
+function applyName(){
+  const inp = document.getElementById("uname"), err = document.getElementById("unameErr");
+  if(!inp) return true;
+  const r = nameCheck(inp.value);
+  if(!r.ok){
+    err.textContent = r.msg; inp.setAttribute("aria-invalid","true"); inp.focus();
+    return false;
+  }
+  state.username = r.value;
+  if(!state.joined) state.joined = new Date().getFullYear();
+  save();
+  return true;
+}
+function welcomeView(){
+  return `
+  <section class="welcome">
+    <p class="wordmark">Questopia</p>
+    <h2>Pick a username.</h2>
+    <p>It shows up next to your avatar.</p>
+    <form id="nameForm" novalidate>
+      <label class="row-label" for="uname">Username</label>
+      <input id="uname" class="text" maxlength="21" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="unameErr" value="${esc(state.username||"")}">
+      <p class="err" id="unameErr" role="alert"></p>
+      <button class="btn solid done" type="submit">Continue</button>
+    </form>
+  </section>`;
+}
+
+function editorView(){
+  const first = !state.look;
+  return `
+  <section class="editor">
+    <h2>${first ? "Make your avatar." : "Edit your avatar."}</h2>
+    <p>Change anything, any time. Tap your avatar on the quest screen to come back.</p>
+    <div class="stage">
+      ${avatarView("full",480)}
+      <div class="nameplate"><b>${esc(state.username||"")}</b><span id="npTitle">${titleHtml(state.title)}</span></div>
+      <button class="btn rand" data-act="random">Randomize</button>
+      ${HAS3D ? `<span class="hint">Drag to turn</span>` : ""}
+    </div>
+    <div class="group"><h3>Username</h3><div class="row">
+      <label class="row-label" for="uname">Shown next to your avatar</label>
+      <input id="uname" class="text" maxlength="21" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="unameErr" value="${esc(state.username||"")}">
+      <p class="err" id="unameErr" role="alert"></p>
+    </div></div>
+    ${GROUPS.map(g=>`<div class="group"><h3>${g.title}</h3>${g.rows.map(rowHtml).join("")}</div>`).join("")}
+    <button class="btn solid done" data-act="done">Done</button>
+  </section>`;
+}
+
+function questRows(kind){
+  const pool = kind==="daily" ? DAILY_POOL : WEEKLY_POOL;
+  const key = kind==="daily" ? state.daily.key : state.weekly.key;
+  const list = pick(pool, kind+key, 3);
+  return list.map(q=>{
+    const done = state[kind].done.includes(q.id);
+    return `
+    <li class="quest ${done?"done":""}">
+      <div>
+        <div class="q-title">${esc(q.title)}</div>
+        <div class="q-meta"><span class="pts ${eventMult()>1?"bonus":""}">${payFor(q.pts)} pts</span>${questMeta(kind,q)}</div>
+      </div>
+      ${questButton(kind, q.id, done, false)}
+    </li>`;
+  }).join("");
+}
+
+function dailyPanel(){
+  const list = pick(DAILY_POOL, "daily"+state.daily.key, 3);
+  const n = list.filter(q=>state.daily.done.includes(q.id)).length;
+  return `<div class="panel-head"><h2>Today</h2><span>${n} of 3 done · resets at midnight</span></div>
+    <ul class="quests">${questRows("daily")}</ul>`;
+}
+function weeklyPanel(){
+  const list = pick(WEEKLY_POOL, "weekly"+state.weekly.key, 3);
+  const n = list.filter(q=>state.weekly.done.includes(q.id)).length;
+  return `<div class="panel-head"><h2>This week</h2><span>${n} of 3 done · resets Monday</span></div>
+    <ul class="quests">${questRows("weekly")}</ul>`;
+}
+function seasonPanel(){
+  const left = Math.max(0, Math.ceil((SEASON.end - new Date())/864e5));
+  const rows = SEASON.quests.map(q=>{
+    const finale = q.auto==="season";
+    const c = finale ? seasonDoneCount() : (state.season.counts[q.id]||0);
+    const done = c>=q.target;
+    const pct = Math.round(c/q.target*100);
+    const control = q.auto
+      ? `<span class="auto">${done?"Done":(finale?"Finish the rest":"Counts daily quests")}</span>`
+      : questButton("season", q.id, done, true);
+    return `
+    <li class="quest ${done?"done":""}">
+      <div>
+        <div class="q-title">${esc(q.title)}</div>
+        <div class="q-meta"><span class="pts ${!finale && eventMult()>1?"bonus":""}">${finale ? esc(SEASON.name)+" title badge" : payFor(q.pts)+" pts"}</span>${q.target>1?`<span>${c} / ${q.target}</span>`:""}${q.auto?"":questMeta("season",q)}</div>
+      </div>
+      ${control}
+      ${q.target>1?`<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${q.target}" aria-valuenow="${c}" aria-label="${esc(q.title)} progress"><i style="width:${pct}%"></i></div>`:""}
+    </li>`;
+  }).join("");
+  return `<div class="panel-head"><h2>${SEASON.name}</h2><span>${left>0?left+" days left":"Season ended"}</span></div>
+    <ul class="quests">${rows}</ul>`;
+}
+
+/* ---------- Locker ---------- */
+let inLocker = false, lockCat = "titles", pendingBuy = null;
+const THUMB_CAM = { glasses:"head", shirts:"torso", pants:"legs", hats:"bust", borders:"head" };
+const THUMB_CAM_ITEM = { wizard:"tall" };
+
+function equip(slot, id){
+  if(slot==="title") state.title = id;
+  else state.gear = Object.assign(getGear(), { [slot]: id });
+}
+const equippedId = slot => slot==="title" ? state.title : getGear()[slot];
+
+function itemAction(catKey, id){
+  const cat = catByKey(catKey), item = findItem(catKey, id); if(!item) return;
+  const key = cat.slot+":"+id, cost = item[2];
+  if(isOwned(cat.slot, id)){ equip(cat.slot, id); pendingBuy = null; }
+  else if(cost < 0){ toast(`Finish every ${SEASON.name} quest to earn this.`); return; }
+  else if(state.points < cost){ toast(`You need ${cost - state.points} more points.`); return; }
+  else if(pendingBuy !== key){ pendingBuy = key; render(); return; } // first tap asks to confirm
+  else {
+    state.points -= cost; state.owned.push(key); equip(cat.slot, id); pendingBuy = null;
+    toast(`Unlocked ${itemName(catKey, id)}`);
+  }
+  save(); setAvatar(); render();
+}
+
+function thumbHtml(cat, id, owner){
+  if(cat.key==="titles") return "";
+  const cv = HAS3D
+    ? `<canvas data-thumb${owner ? ` data-owner="${owner}"` : ""} data-slot="${cat.slot}" data-id="${id}" data-cam="${THUMB_CAM_ITEM[id] || THUMB_CAM[cat.key]}" width="200" height="200" aria-hidden="true"></canvas>`
+    : "";
+  if(cat.key==="borders") return `<div class="me ring-sample" style="background:${ringBg(id)}"><span class="me-in">${cv}</span></div>`;
+  return HAS3D ? `<div class="thumb">${cv}</div>` : `<div class="thumb thumb-fallback">${esc(itemName(cat.key,id))}</div>`;
+}
+
+function itemCard(cat, it){
+  const id = it[0], cost = it[2], slot = cat.slot;
+  const owned = isOwned(slot, id), equipped = equippedId(slot) === id;
+  const pending = pendingBuy === slot+":"+id;
+  let label, cls = "btn", dis = "";
+  if(equipped){ label = "Equipped"; cls += " solid"; dis = " disabled"; }
+  else if(owned){ label = "Equip"; }
+  else if(cost < 0){ label = "Locked"; dis = " disabled"; }
+  else if(state.points < cost){ label = `${cost} pts`; dis = " disabled"; }
+  else if(pending){ label = `Spend ${cost} pts?`; cls += " solid"; }
+  else { label = `Unlock · ${cost} pts`; }
+  const meta = owned ? (cost===0 ? "Free" : cost<0 ? "Earned" : "Unlocked")
+    : cost<0 ? `Finish every ${SEASON.name} quest`
+    : (state.points<cost ? `Need ${cost-state.points} more points` : `${cost} points`);
+  const name = (cat.key==="titles" ? titleHtml(id) : esc(itemName(cat.key, id))) + (it[3] ? `<span class="tag">Special</span>` : "");
+  const btn = `<button class="${cls}" data-act="item" data-cat="${cat.key}" data-id="${id}"${dis}>${label}</button>`;
+  if(cat.key==="titles"){
+    return `<li class="item row ${equipped?"equipped":""}"><div><span class="item-name">${name}</span><span class="item-meta">${meta}</span></div>${btn}</li>`;
+  }
+  return `<li class="item ${equipped?"equipped":""}">${thumbHtml(cat,id)}<div><span class="item-name">${name}</span><span class="item-meta">${meta}</span></div>${btn}</li>`;
+}
+
+function dockHtml(){
+  return `<div class="dock">
+      <div class="np">
+        <div class="me" style="background:${ringBg(getGear().border)}"><span class="me-in">${avatarView("head",160)}</span></div>
+        <div class="np-txt"><b>${esc(state.username)}</b><span>${titleHtml(state.title)}</span></div>
+      </div>
+      <div class="stage">${avatarView("full",480)}${HAS3D ? `<span class="hint">Drag to turn</span>` : ""}</div>
+    </div>`;
+}
+/* Shop: special cosmetics you can only get here. Once bought they show up in the Locker too. */
+let inShop = false;
+function shopView(){
+  const sections = CATS.map(cat=>({ cat, items:CATALOG[cat.key].filter(it=>it[3]) })).filter(x=>x.items.length);
+  const total = sections.reduce((n,x)=>n+x.items.length, 0);
+  const own = sections.reduce((n,x)=>n+x.items.filter(it=>isOwned(x.cat.slot,it[0])).length, 0);
+  return `
+  <section class="locker shop">
+    <div class="locker-top">
+      <button class="backlink" data-act="close-shop">‹ Quests</button>
+      <h2>Shop</h2>
+      <div class="points" aria-label="${state.points} points">${state.points}<small>points</small></div>
+    </div>
+    ${dockHtml()}
+    <p class="demo-note" style="margin-top:14px">Special cosmetics you can't get anywhere else. You own ${own} of ${total}.</p>
+    ${sections.map(x=>`<h3 class="sec-title">${x.cat.label}</h3>
+      <ul class="items ${x.cat.key==="titles"?"one":""}">${x.items.map(it=>itemCard(x.cat,it)).join("")}</ul>`).join("")}
+  </section>`;
+}
+
+function lockerView(){
+  const cat = catByKey(lockCat), items = CATALOG[cat.key].filter(it=>!it[3] || isOwned(cat.slot, it[0]));
+  const have = items.filter(i=>isOwned(cat.slot, i[0])).length;
+  return `
+  <section class="locker">
+    <div class="locker-top">
+      <button class="backlink" data-act="close-locker">‹ Quests</button>
+      <h2>Locker</h2>
+      <div class="points" aria-label="${state.points} points">${state.points}<small>points</small></div>
+    </div>
+    ${dockHtml()}
+    <div class="cats" role="group" aria-label="Item type">
+      ${CATS.map(c=>`<button class="chip" data-act="cat" data-cat="${c.key}" aria-pressed="${c.key===lockCat}">${c.label}</button>`).join("")}
+    </div>
+    <p class="cat-note">${have} of ${items.length} unlocked</p>
+    <ul class="items ${cat.key==="titles"?"one":""}">${items.map(it=>itemCard(cat,it)).join("")}</ul>
+  </section>`;
+}
+
+/* Small still pictures of each item on your avatar, drawn once when the Locker opens */
+function renderThumbs(){
+  if(!HAS3D || !avatarGroup) return;
+  avatarGroup.visible = false;
+  document.querySelectorAll("canvas[data-thumb]").forEach(cv=>{
+    const owner = cv.dataset.owner ? samplePlayer(cv.dataset.owner) : null; // a friend's Locker draws on the friend's avatar
+    const look = owner ? Object.assign({}, DEFAULT_LOOK, owner.look) : getLook();
+    const gear = owner ? Object.assign({}, DEFAULT_GEAR, owner.gear) : getGear();
+    const g = buildHuman(look, Object.assign({}, gear, { [cv.dataset.slot]: cv.dataset.id }));
+    g.rotation.y = .35; scene.add(g);
+    R.render(scene, cams[cv.dataset.cam] || camFull);
+    const ctx = cv.getContext("2d");
+    ctx.imageSmoothingQuality = "high";
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.drawImage(R.domElement,0,0,cv.width,cv.height);
+    scene.remove(g); disposeGroup(g);
+  });
+  avatarGroup.visible = true;
+}
+
+/* ---------- Friends ---------- */
+let friendsPage = null, viewCode = null, pendingRemove = false; // friendsPage: null | "list" | "requests" | "profile"
+const friendTitle = p => p.title==="since" ? `Touching Grass since ${p.joined}` : titleName(p.title);
+const friendTitleHtml = p => (BADGE_TITLES.has(p.title) ? BADGE_SVG : "") + esc(friendTitle(p));
+const friendList = key => state[key].map(samplePlayer).filter(Boolean);
+const friendAvatar = (p, cam, size) => HAS3D
+  ? `<canvas data-friend="${p.code}" data-cam="${cam}" width="${size}" height="${size}" role="img" aria-label="${esc(p.name)}'s avatar"></canvas>`
+  : fallbackSvg(Object.assign({}, DEFAULT_LOOK, p.look));
+const countBadge = n => n>0 ? `<span class="count-badge" aria-label="${n} pending">${n}</span>` : "";
+
+function friendsHeader(title, backAct, backLabel, page){
+  return `<div class="locker-top">
+    <button class="backlink" data-act="${backAct}"${page ? ` data-page="${page}"` : ""}>‹ ${backLabel}</button>
+    <h2>${title}</h2>
+  </div>`;
+}
+function friendRow(p){
+  return `<li><button class="fbtn" data-act="view-friend" data-code="${p.code}">
+    <span class="me" style="background:${ringBg((p.gear||{}).border)}"><span class="me-in">${friendAvatar(p,"head",160)}</span></span>
+    <span class="f-txt"><b>${esc(p.name)}</b><span>${friendTitleHtml(p)}</span></span>
+    <span class="chev" aria-hidden="true" style="font-size:24px">›</span>
+  </button></li>`;
+}
+function friendsView(){
+  const friends = friendList("friends"), n = state.requests.length;
+  return `<section class="friends">
+    ${friendsHeader("Friends","close-friends","Quests")}
+    <p class="demo-note">Friend requests between real players are coming soon. Your code will work once online accounts launch.${ONLINE && !cloud.session ? ` <button class="linkbtn" data-act="open-account">Sign in</button>` : ""}</p>
+    <div class="code-card">
+      <div><small>Your friend code</small><b id="myCode">${state.friendCode}</b></div>
+      <button class="btn" data-act="copy-code">Copy</button>
+    </div>
+    <form class="add-friend" id="addForm" autocomplete="off">
+      <label class="sr" for="fcode">Friend's code</label>
+      <input class="text" id="fcode" maxlength="9" placeholder="Enter a friend's code" spellcheck="false" autocapitalize="characters">
+      <button class="btn solid" type="submit">Add</button>
+    </form>
+    <p class="err" id="fErr" role="alert"></p>
+    <button class="locker-btn pending-btn" data-act="friends-page" data-page="requests">
+      <span class="lb-txt"><b>Pending Friend Requests</b><span>${n ? `${n} waiting for you` : "Nothing waiting right now"}</span></span>
+      ${countBadge(n)}
+      <span class="chev" aria-hidden="true">›</span>
+    </button>
+    ${TEST_MODE ? `<button class="btn" data-act="test-request" style="width:100%;margin-top:10px">Test: send me a friend request</button>` : ""}
+    <h3 class="sec-title">Your friends <span>${friends.length}</span></h3>
+    ${friends.length
+      ? `<ul class="flist">${friends.map(friendRow).join("")}</ul>`
+      : `<p class="empty">No friends yet. Share your code or add one above.</p>`}
+    ${state.challenges.length ? `<h3 class="sec-title">Challenges <span>${state.challenges.filter(c=>!c.done).length} active</span></h3>
+      <ul class="flist">${state.challenges.map(challengeRow).join("")}</ul>` : ""}
+  </section>`;
+}
+function requestsView(){
+  const reqs = friendList("requests");
+  return `<section class="friends">
+    ${friendsHeader("Requests","friends-page","Friends")}
+    ${reqs.length ? `<ul class="flist">${reqs.map(p=>`<li class="freq">
+      <span class="me" style="background:${ringBg((p.gear||{}).border)}"><span class="me-in">${friendAvatar(p,"head",160)}</span></span>
+      <span class="f-txt"><b>${esc(p.name)}</b><span>${friendTitleHtml(p)}</span></span>
+      <span class="acts">
+        <button class="btn solid" data-act="accept" data-code="${p.code}" aria-label="Accept ${esc(p.name)}">Accept</button>
+        <button class="btn" data-act="decline" data-code="${p.code}" aria-label="Decline ${esc(p.name)}">Decline</button>
+      </span></li>`).join("")}</ul>`
+    : `<p class="empty">No pending requests.</p>`}
+  </section>`;
+}
+function profileView(){
+  const p = samplePlayer(viewCode);
+  if(!p) return friendsView();
+  return `<section class="friends profile">
+    ${friendsHeader("Profile","friends-page","Friends")}
+    <div class="stage">${friendAvatar(p,"full",480)}</div>
+    <div class="big-name">${esc(p.name)}</div>
+    <div class="big-title">${friendTitleHtml(p)}</div>
+    <div class="facts"><span>Joined ${p.joined}</span><span>Code ${p.code}</span></div>
+    <div class="pbtns">
+      <button class="btn solid" data-act="new-challenge" data-code="${p.code}">Challenge Friend</button>
+      <button class="btn" data-act="friend-locker" data-code="${p.code}">Locker</button>
+      <button class="btn" data-act="remove-friend" data-code="${p.code}">${pendingRemove ? "Tap again to remove" : "Remove friend"}</button>
+    </div>
+  </section>`;
+}
+function renderFriendAvatars(){
+  if(!HAS3D || !avatarGroup) return;
+  avatarGroup.visible = false;
+  document.querySelectorAll("canvas[data-friend]").forEach(cv=>{
+    const p = samplePlayer(cv.dataset.friend); if(!p) return;
+    const g = buildHuman(Object.assign({}, DEFAULT_LOOK, p.look), Object.assign({}, DEFAULT_GEAR, p.gear));
+    g.rotation.y = cv.dataset.cam==="full" ? .35 : .2; scene.add(g);
+    R.render(scene, cams[cv.dataset.cam] || camFull);
+    const ctx = cv.getContext("2d");
+    ctx.imageSmoothingQuality = "high";
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.drawImage(R.domElement,0,0,cv.width,cv.height);
+    scene.remove(g); disposeGroup(g);
+  });
+  avatarGroup.visible = true;
+}
+function addFriendByCode(raw){
+  const code = raw.trim().toUpperCase().replace(/\s+/g,"");
+  const err = document.getElementById("fErr");
+  const fail = m => { err.textContent = m; document.getElementById("fcode").setAttribute("aria-invalid","true"); return false; };
+  if(!code) return fail("Type a friend code first.");
+  if(code === state.friendCode) return fail("That's your own code.");
+  if(state.friends.includes(code)) return fail("You're already friends.");
+  const p = samplePlayer(code);
+  if(!p) return fail(TEST_MODE ? "Try TEST-RQ02 to test adding by code." : "Adding friends by code isn\u2019t live yet. Coming soon!");
+  state.requests = state.requests.filter(c=>c!==code);
+  state.friends.push(code); save(); render();
+  toast(`${p.name} is now your friend`);
+  return true;
+}
+
+/* ---------- Challenges ---------- */
+/* Most points earned before the end date wins. 1st gets the reward, 2nd half, 3rd a third, nobody else.
+   Earning 0 points means no reward. Ties share a place. Test players earn points on a simple timer until real accounts exist. */
+const MAX_DAYS = 30;
+let draft = null, viewChallenge = null;
+function endTs(ch){ const [y,m,d] = ch.end.split("-").map(Number); return new Date(y,m-1,d,23,59,59).getTime(); }
+function prizeFor(place, reward){ return place===1 ? reward : place===2 ? Math.floor(reward/2) : place===3 ? Math.floor(reward/3) : 0; }
+function ordinal(n){ return n===1 ? "1st" : n===2 ? "2nd" : n===3 ? "3rd" : n+"th"; }
+function theirScore(code, ch, at){
+  const days = Math.max(0, (Math.min(at, endTs(ch)) - ch.created) / 864e5);
+  return Math.floor(days * (15 + hash(code) % 35));
+}
+function standings(ch, at){
+  if(ch.done && ch.results) return ch.results;
+  at = at || Date.now();
+  const rows = [{ code:"me", name:"You", score:Math.max(0, state.earnedTotal - ch.startTotal) }]
+    .concat(ch.players.map(p=>({ code:p.code, name:p.name, score:theirScore(p.code, ch, at) })));
+  rows.sort((a,b)=>b.score - a.score);
+  rows.forEach((r,i)=>{
+    r.place = i>0 && r.score===rows[i-1].score ? rows[i-1].place : i+1;
+    r.prize = r.score>0 ? prizeFor(r.place, ch.reward) : 0;
+  });
+  return rows;
+}
+// Settles any challenge whose end date has passed. Returns true if one finished.
+function finishChallenges(){
+  const now = Date.now(); let msg = null;
+  (state.challenges||[]).forEach(ch=>{
+    if(ch.done || now <= endTs(ch)) return;
+    const rows = standings(ch, endTs(ch));
+    const me = rows.find(r=>r.code==="me");
+    ch.results = rows; ch.done = true;
+    if(me.prize > 0) state.points += me.prize; // prizes are not "earned" points, so they can't feed later challenges
+    msg = me.prize>0 ? `Challenge over! You placed ${ordinal(me.place)}: +${me.prize} points` : "Challenge over. No reward this time.";
+  });
+  if(msg){ save(); toast(msg); return true; }
+  return false;
+}
+const fmtDay = str => { const [y,m,d] = str.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString(undefined,{month:"short",day:"numeric"}); };
+const prizeLine = r => `1st ${prizeFor(1,r)} · 2nd ${prizeFor(2,r)} · 3rd ${prizeFor(3,r)}`;
+
+function challengeRow(ch){
+  const rows = standings(ch), me = rows.find(r=>r.code==="me");
+  const names = ch.players.map(p=>esc(p.name)).join(", ");
+  const sub = ch.done
+    ? `Finished · you placed ${ordinal(me.place)}${me.prize ? ` · +${me.prize} pts` : ""}`
+    : `Ends ${fmtDay(ch.end)} · you're ${ordinal(me.place)} with ${me.score} pts`;
+  return `<li><button class="fbtn" data-act="view-challenge" data-id="${ch.id}">
+    <span class="f-txt"><b>vs ${names}</b><span>${sub}</span></span>
+    <span class="chev" aria-hidden="true" style="font-size:24px">›</span></button></li>`;
+}
+/* A friend's Locker: read-only, shows every cosmetic they have unlocked */
+let fLockCat = "titles";
+function friendOwned(p, catKey){
+  const cat = catByKey(catKey);
+  const eq = catKey==="titles" ? p.title : ((p.gear||{})[cat.slot] || DEFAULT_GEAR[cat.slot]);
+  return CATALOG[catKey].filter(it => it[2]===0 || it[0]===eq || (p.owned||[]).includes(cat.slot+":"+it[0]));
+}
+function friendLockerView(){
+  const p = samplePlayer(viewCode); if(!p) return friendsView();
+  const cat = catByKey(fLockCat), items = friendOwned(p, cat.key);
+  const eq = cat.key==="titles" ? p.title : ((p.gear||{})[cat.slot] || DEFAULT_GEAR[cat.slot]);
+  const card = it => {
+    const id = it[0], on = id===eq;
+    const name = cat.key==="titles" ? friendTitleHtml({ title:id, joined:p.joined }) : esc(it[1]);
+    const meta = on ? "Equipped" : it[2]===0 ? "Free" : it[2]<0 ? "Earned" : "Unlocked";
+    return cat.key==="titles"
+      ? `<li class="item row ${on?"equipped":""}"><div><span class="item-name">${name}</span><span class="item-meta">${meta}</span></div></li>`
+      : `<li class="item ${on?"equipped":""}">${thumbHtml(cat, id, p.code)}<div><span class="item-name">${name}</span><span class="item-meta">${meta}</span></div></li>`;
+  };
+  return `<section class="friends flocker">
+    ${friendsHeader("Locker","friends-page","Profile","profile")}
+    <div class="np">
+      <div class="me" style="background:${ringBg((p.gear||{}).border)}"><span class="me-in">${friendAvatar(p,"head",160)}</span></div>
+      <div class="np-txt"><b>${esc(p.name)}</b><span>${friendTitleHtml(p)}</span></div>
+    </div>
+    <div class="cats" role="group" aria-label="Item type">
+      ${CATS.map(c=>`<button class="chip" data-act="fcat" data-cat="${c.key}" aria-pressed="${c.key===fLockCat}">${c.label}</button>`).join("")}
+    </div>
+    <p class="cat-note">${items.length} of ${CATALOG[cat.key].length} unlocked</p>
+    <ul class="items ${cat.key==="titles"?"one":""}">${items.map(card).join("")}</ul>
+  </section>`;
+}
+
+function newChallengeView(){
+  const friends = friendList("friends");
+  const day = n => { const d = new Date(); d.setDate(d.getDate()+n); return dayKey(d); };
+  return `<section class="friends">
+    ${friendsHeader("Challenge","friends-page","Back","profile")}
+    <form class="chal-form" id="challengeForm" novalidate>
+      <p class="row-label">Who's competing?</p>
+      <ul class="flist">${friends.map(p=>`<li><label class="pick">
+        <input type="checkbox" name="pl" value="${p.code}" ${p.code===(draft&&draft.code)?"checked":""}>
+        <span>${esc(p.name)}</span></label></li>`).join("")}</ul>
+      <label class="row-label" for="cEnd">Challenge ends on (end of that day)</label>
+      <input class="text" type="date" id="cEnd" min="${day(1)}" max="${day(MAX_DAYS)}" value="${day(7)}">
+      <label class="row-label" for="rwd">First place reward: <b id="rwdVal">100</b> points</label>
+      <input class="range" type="range" id="rwd" min="0" max="500" step="10" value="100">
+      <p class="prizes" id="prizes">${prizeLine(100)}</p>
+      <p class="err" id="cErr" role="alert"></p>
+      <button class="btn solid go" type="submit">Start challenge</button>
+    </form>
+    <p class="note">Whoever earns the most points from quests before the end date wins. Anyone who earns 0 points gets no reward.</p>
+  </section>`;
+}
+function challengeView(){
+  const ch = state.challenges.find(c=>c.id===viewChallenge);
+  if(!ch) return friendsView();
+  const rows = standings(ch), me = rows.find(r=>r.code==="me");
+  const left = Math.max(0, Math.ceil((endTs(ch)-Date.now())/864e5));
+  return `<section class="friends challenge">
+    ${friendsHeader("Challenge","friends-page","Friends")}
+    <div class="chal-sum">
+      <b>${ch.done ? "Finished" : `Ends ${fmtDay(ch.end)}`}</b>
+      <span>${ch.done ? `Ended ${fmtDay(ch.end)}` : `${left} day${left===1?"":"s"} left`}</span>
+    </div>
+    <p class="prizes">Prizes: ${prizeLine(ch.reward)}</p>
+    ${ch.done ? `<p class="demo-note">${me.prize ? `You placed ${ordinal(me.place)} and won ${me.prize} points!` : (me.score>0 ? `You placed ${ordinal(me.place)}. No reward this time.` : "You earned 0 points, so no reward.")}</p>` : ""}
+    <ul class="flist">${rows.map(r=>`<li class="stand ${r.code==="me"?"mine":""}">
+      <span class="place">${r.place}</span>
+      <span class="f-txt"><b>${esc(r.name)}</b><span>${r.score} points</span></span>
+      <span class="pts">${r.prize ? "+"+r.prize : "no prize"}</span></li>`).join("")}</ul>
+    ${!ch.done && TEST_MODE ? `<button class="btn" data-act="test-end" data-id="${ch.id}" style="width:100%;margin-top:14px">Test: end challenge now</button>` : ""}
+  </section>`;
+}
+function startChallenge(){
+  const err = document.getElementById("cErr");
+  const fail = m => { err.textContent = m; return false; };
+  const picks = [...document.querySelectorAll('input[name="pl"]:checked')].map(i=>i.value);
+  if(!picks.length) return fail("Pick at least one friend.");
+  const end = document.getElementById("cEnd").value;
+  const lo = dayKey(new Date(Date.now()+864e5)), hi = dayKey(new Date(Date.now()+MAX_DAYS*864e5));
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(end)) return fail("Pick an end date.");
+  if(end < lo) return fail("The end date has to be tomorrow or later.");
+  if(end > hi) return fail(`Challenges can last up to ${MAX_DAYS} days.`);
+  const reward = Math.max(0, Math.min(500, Math.round((+document.getElementById("rwd").value||0)/10)*10));
+  const ch = { id:"c"+Date.now(), created:Date.now(), end, reward, startTotal:state.earnedTotal,
+    players: picks.map(c=>{ const p = samplePlayer(c); return { code:c, name:p?p.name:c }; }), done:false };
+  state.challenges.unshift(ch); save();
+  viewChallenge = ch.id; friendsPage = "challenge"; render(); window.scrollTo(0,0);
+  toast("Challenge started!");
+  return true;
+}
+
+/* ---------- Admin (hidden: tap the small note at the bottom of the quest screen 5 times) ---------- */
+let inAdmin = false, noteTaps = [];
+function saveAdminSession(){ try{ adminSession ? sessionStorage.setItem("questopia-admin", JSON.stringify(adminSession)) : sessionStorage.removeItem("questopia-admin"); }catch(e){} }
+async function adminSignIn(email, pw){
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, { method:"POST",
+    headers:{ apikey:SUPABASE_ANON_KEY, "Content-Type":"application/json" }, body:JSON.stringify({ email, password:pw }) });
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok || !j.access_token) throw new Error(j.error_description || j.msg || "Sign-in failed.");
+  const a = await fetch(`${SUPABASE_URL}/rest/v1/admins?select=user_id`, { headers:sbHeaders(j.access_token) });
+  const rows = await a.json().catch(()=>[]);
+  adminSession = { token:j.access_token, email, isAdmin:Array.isArray(rows) && rows.length>0 };
+  saveAdminSession();
+}
+async function saveEvent(mult, untilIso, banner){
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/settings?id=eq.1`, { method:"PATCH",
+    headers:Object.assign(sbHeaders(adminSession.token), { Prefer:"return=representation" }),
+    body:JSON.stringify({ points_multiplier:mult, until:untilIso, banner, updated_at:new Date().toISOString() }) });
+  const rows = await r.json().catch(()=>[]);
+  if(r.status===401){ adminSession = null; saveAdminSession(); throw new Error("Your sign-in expired. Sign in again."); }
+  if(!r.ok || !Array.isArray(rows) || !rows.length) throw new Error("Not allowed. Is this account an admin?");
+  await loadEvent();
+}
+function adminView(){
+  const back = `<div class="locker-top"><button class="backlink" data-act="close-admin">‹ Quests</button><h2>Admin</h2></div>`;
+  if(!ONLINE) return `<section class="admin">${back}<p class="demo-note">Online features aren't set up yet. Add your Supabase URL and anon key at the top of the script.</p></section>`;
+  if(!adminSession) return `<section class="admin">${back}
+    <form class="group" id="adminLogin" novalidate>
+      <h3>Admin sign-in</h3>
+      <label class="row-label" for="aEmail">Email</label>
+      <input class="text" id="aEmail" type="email" autocomplete="username" style="text-transform:none">
+      <label class="row-label" for="aPass" style="margin-top:12px">Password</label>
+      <input class="text" id="aPass" type="password" autocomplete="current-password">
+      <p class="err" id="aErr" role="alert"></p>
+      <button class="btn solid" type="submit" style="width:100%">Sign in</button>
+    </form></section>`;
+  if(!adminSession.isAdmin) return `<section class="admin">${back}
+    <p class="demo-note">${esc(adminSession.email)} is signed in, but it isn't an admin account.</p>
+    <button class="btn" data-act="admin-out">Sign out</button></section>`;
+  const on = eventMult()>1, e = eventSettings;
+  return `<section class="admin">${back}
+    <div class="group">
+      <h3>Bonus points for everyone</h3>
+      <p class="stat">${on ? `${eventMult()}x is ON${e.until ? " until "+new Date(e.until).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : ""}` : "Off"}</p>
+      <div class="row" style="margin-top:12px"><label class="row-label" for="evMult">Multiplier</label>
+        <select class="text" id="evMult"><option value="2" selected>2x (double)</option><option value="1.5">1.5x</option><option value="3">3x</option></select></div>
+      <div class="row"><label class="row-label" for="evLen">How long</label>
+        <select class="text" id="evLen"><option value="1">1 day</option><option value="3">3 days</option><option value="7" selected>7 days</option><option value="0">Until I turn it off</option></select></div>
+      <div class="row"><label class="row-label" for="evBanner">Message players see</label>
+        <input class="text" id="evBanner" maxlength="60" value="Double points weekend!" style="text-transform:none"></div>
+      <p class="err" id="aErr" role="alert"></p>
+      <button class="btn solid big" data-act="ev-start">${on ? "Update event" : "Start event"}</button>
+      ${on ? `<button class="btn big" data-act="ev-stop">Turn off</button>` : ""}
+    </div>
+    <button class="btn" data-act="admin-out" style="margin-top:14px">Sign out (${esc(adminSession.email)})</button>
+  </section>`;
+}
+
+function mainView(){
+  const panels = { daily:dailyPanel, weekly:weeklyPanel, season:seasonPanel };
+  return `
+  <header class="top">
+    <button class="me" style="background:${ringBg(getGear().border)}" data-act="open-editor" aria-label="Edit your avatar"><span class="me-in">${avatarView("head",160)}</span></button>
+    <div class="brand"><h1>${esc(state.username)}</h1><p>${titleHtml(state.title)}</p></div>
+    <div class="points" aria-label="${state.points} points">${state.points}<small>points</small></div>
+  </header>
+  ${eventMult()>1 ? `<div class="event-banner"><b>${eventMult()}x points!</b><span>${esc(eventSettings.banner || "Bonus points event")}${eventSettings.until ? " · ends "+new Date(eventSettings.until).toLocaleDateString(undefined,{month:"short",day:"numeric"}) : ""}</span></div>` : ""}
+  <button class="locker-btn" data-act="open-locker">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 3v18M9 9v2M15 9v2"/></svg>
+    <span class="lb-txt"><b>Locker</b><span>Titles, glasses, shirts, pants, hats and borders</span></span>
+    <span class="chev" aria-hidden="true">›</span>
+  </button>
+  <button class="locker-btn" data-act="open-friends">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.6 3-5.5 6.5-5.5s6 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14.5c2.2.2 3.7 1.6 4 4.5"/></svg>
+    <span class="lb-txt"><b>Friends List</b><span>Your friend code and your friends</span></span>
+    ${countBadge(state.requests.length)}
+    <span class="chev" aria-hidden="true">›</span>
+  </button>
+  <button class="locker-btn" data-act="open-shop">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+    <span class="lb-txt"><b>Shop</b><span>Special cosmetics you can't find anywhere else</span></span>
+    <span class="chev" aria-hidden="true">›</span>
+  </button>
+  <div class="tabs" role="tablist">
+    ${["daily","weekly","season"].map(t=>`<button class="tab" role="tab" aria-selected="${tab===t}" data-act="tab" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}
+  </div>
+  <section class="panel" role="tabpanel">${panels[tab]()}</section>
+  <p class="note">Tap Start, go do the quest, and Complete unlocks when the timer ends. One quest at a time. Spend your points in the Locker or the Shop.</p>
+  ${ONLINE ? `<p class="acct-line">${cloud.session ? `☁ Saved online · ` : ""}<button class="linkbtn" data-act="open-account">${cloud.session ? "Account" : "Save your progress online"}</button></p>` : ""}`;
+}
+
+function render(){
+  const welcome = !state.username;
+  document.getElementById("app").innerHTML =
+    welcome ? welcomeView() : editing ? editorView() : inAccount ? accountView() : inAdmin ? adminView() : inLocker ? lockerView() : inShop ? shopView()
+    : friendsPage==="requests" ? requestsView() : friendsPage==="profile" ? profileView()
+    : friendsPage==="friend-locker" ? friendLockerView() : friendsPage==="new-challenge" ? newChallengeView() : friendsPage==="challenge" ? challengeView()
+    : friendsPage ? friendsView() : mainView();
+  if(!welcome && !editing && friendsPage) renderFriendAvatars();
+  if(!welcome && editing) updateEditorUI();
+  if(welcome){ const i = document.getElementById("uname"); if(i) i.focus(); }
+  if(!welcome && !editing && (inLocker || inShop || friendsPage==="friend-locker")) renderThumbs();
+  draw(performance.now());
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", e=>{
+  if(e.target.closest("p.note") && !inLocker && !inShop && !friendsPage && !editing){ // 5 quick taps on the footer note opens Admin
+    const now = Date.now(); noteTaps = noteTaps.filter(t=>now-t<3000).concat(now);
+    if(noteTaps.length>=5){ noteTaps=[]; inAdmin=true; render(); window.scrollTo(0,0); }
+    return;
+  }
+  const el = e.target.closest("[data-act]"); if(!el) return;
+  const act = el.dataset.act;
+  if(act==="set"){ setLookValue(el.dataset.key, el.dataset.val); }
+  else if(act==="random"){ randomLook(); }
+  else if(act==="open-locker"){ inLocker=true; pendingBuy=null; render(); window.scrollTo(0,0); }
+  else if(act==="close-locker"){ inLocker=false; pendingBuy=null; render(); window.scrollTo(0,0); }
+  else if(act==="open-account"){ inAccount=true; render(); window.scrollTo(0,0); }
+  else if(act==="close-account"){ inAccount=false; render(); window.scrollTo(0,0); }
+  else if(act==="sign-in"){ signInWith(el.dataset.provider); }
+  else if(act==="sign-out"){ signOut(); render(); }
+  else if(act==="save-now"){ cloud.status = "Saving..."; render(); pushCloud(); }
+  else if(act==="use-cloud"){ adoptCloud(cloud.conflict.row); }
+  else if(act==="use-local"){ cloud.conflict = null; state.syncedAt = null; pushCloud().then(()=>render()); }
+  else if(act==="close-admin"){ inAdmin=false; render(); window.scrollTo(0,0); }
+  else if(act==="admin-out"){ adminSession=null; saveAdminSession(); render(); }
+  else if(act==="ev-start" || act==="ev-stop"){
+    const err = document.getElementById("aErr"); err.textContent = "";
+    const stop = act==="ev-stop";
+    const days = +document.getElementById("evLen").value;
+    const until = stop || !days ? null : new Date(Date.now()+days*864e5).toISOString();
+    el.disabled = true;
+    saveEvent(stop ? 1 : +document.getElementById("evMult").value, until, stop ? "" : document.getElementById("evBanner").value.trim())
+      .then(()=>{ render(); toast(stop ? "Event turned off" : "Event is live for everyone"); })
+      .catch(e=>{ el.disabled=false; const x=document.getElementById("aErr"); if(x) x.textContent=e.message; if(!adminSession) render(); });
+  }
+  else if(act==="open-shop"){ inShop=true; pendingBuy=null; render(); window.scrollTo(0,0); }
+  else if(act==="close-shop"){ inShop=false; pendingBuy=null; render(); window.scrollTo(0,0); }
+  else if(act==="open-friends"){ friendsPage="list"; render(); window.scrollTo(0,0); }
+  else if(act==="close-friends"){ friendsPage=null; render(); window.scrollTo(0,0); }
+  else if(act==="friends-page"){ friendsPage = el.dataset.page || "list"; pendingRemove=false; render(); window.scrollTo(0,0); }
+  else if(act==="view-friend"){ viewCode = el.dataset.code; pendingRemove=false; friendsPage="profile"; render(); window.scrollTo(0,0); }
+  else if(act==="copy-code"){
+    try { navigator.clipboard.writeText(state.friendCode).then(()=>toast("Code copied"), ()=>toast("Copy it by hand: "+state.friendCode)); }
+    catch(_){ toast("Copy it by hand: "+state.friendCode); }
+  }
+  else if(act==="accept"){
+    const c = el.dataset.code, p = samplePlayer(c);
+    state.requests = state.requests.filter(x=>x!==c);
+    if(!state.friends.includes(c)) state.friends.push(c);
+    save(); render(); if(p) toast(`${p.name} is now your friend`);
+  }
+  else if(act==="test-request"){
+    const next = SAMPLE_PLAYERS.find(p=>p.code!=="TEST-FRND" && !state.friends.includes(p.code) && !state.requests.includes(p.code));
+    if(!next){ toast("No more test players left."); return; }
+    state.requests.push(next.code); save(); render(); toast(`${next.name} sent you a request`);
+  }
+  else if(act==="friend-locker"){ viewCode = el.dataset.code; fLockCat = "titles"; friendsPage = "friend-locker"; render(); window.scrollTo(0,0); }
+  else if(act==="fcat"){ fLockCat = el.dataset.cat; render(); }
+  else if(act==="new-challenge"){ draft = { code: el.dataset.code }; friendsPage = "new-challenge"; render(); window.scrollTo(0,0); }
+  else if(act==="view-challenge"){ viewChallenge = el.dataset.id; friendsPage = "challenge"; render(); window.scrollTo(0,0); }
+  else if(act==="test-end"){
+    const ch = state.challenges.find(c=>c.id===el.dataset.id);
+    if(ch){ ch.end = dayKey(new Date(Date.now()-864e5)); finishChallenges(); render(); }
+  }
+  else if(act==="decline"){ state.requests = state.requests.filter(x=>x!==el.dataset.code); save(); render(); }
+  else if(act==="remove-friend"){
+    if(!pendingRemove){ pendingRemove=true; render(); return; }
+    state.friends = state.friends.filter(x=>x!==el.dataset.code);
+    pendingRemove=false; friendsPage="list"; save(); render(); window.scrollTo(0,0);
+  }
+  else if(act==="cat"){ lockCat = el.dataset.cat; pendingBuy=null; render(); }
+  else if(act==="item"){ itemAction(el.dataset.cat, el.dataset.id); }
+  else if(act==="done"){
+    if(!applyName()) return;
+    state.look = getLook(); save(); editing=false; render(); window.scrollTo(0,0);
+  }
+  else if(act==="open-editor"){ editing=true; render(); window.scrollTo(0,0); }
+  else if(act==="tab"){ tab = el.dataset.tab; render(); }
+  else if(act==="toggle"){ toggle(el.dataset.kind, el.dataset.id); }
+  else if(act==="start"){ startQuest(el.dataset.kind, el.dataset.id); }
+  else if(act==="cancel"){ cancelQuest(); }
+  else if(act==="log"){
+    const id = el.dataset.id;
+    if(!timerDone("season", id)) return;
+    state.active = null;
+    state.season.last = Object.assign(state.season.last||{}, { [id]: dayKey() });
+    bumpSeason(id, 1); save(); render();
+  }
+});
+document.addEventListener("submit", e=>{
+  if(e.target.id === "adminLogin"){
+    e.preventDefault();
+    const err = document.getElementById("aErr"); err.textContent = "";
+    adminSignIn(document.getElementById("aEmail").value.trim(), document.getElementById("aPass").value)
+      .then(()=>render()).catch(x=>{ err.textContent = x.message; });
+    return;
+  }
+  if(e.target.id === "challengeForm"){ e.preventDefault(); startChallenge(); return; }
+  if(e.target.id === "addForm"){ e.preventDefault(); addFriendByCode(document.getElementById("fcode").value); return; }
+  if(e.target.id !== "nameForm") return;
+  e.preventDefault();
+  if(applyName()) render();
+});
+document.addEventListener("input", e=>{
+  if(e.target.id === "rwd"){
+    const v = +e.target.value;
+    document.getElementById("rwdVal").textContent = v;
+    document.getElementById("prizes").textContent = prizeLine(v);
+    return;
+  }
+  if(e.target.id === "uname"){
+    e.target.removeAttribute("aria-invalid");
+    const err = document.getElementById("unameErr"); if(err) err.textContent = "";
+    return;
+  }
+  const el = e.target.closest("input[data-key]");
+  if(el) setLookValue(el.dataset.key, el.value);
+});
+document.addEventListener("pointerdown", e=>{
+  const cv = e.target.closest('canvas[data-mode="full"]'); if(!cv) return;
+  drag = { x:e.clientX }; lastInteract = performance.now();
+  try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+});
+document.addEventListener("pointermove", e=>{
+  if(!drag) return;
+  userYaw += (e.clientX - drag.x) * .012; drag.x = e.clientX;
+  lastInteract = performance.now();
+  if(REDUCED) draw(lastInteract);
+});
+const endDrag = ()=>{ drag = null; lastInteract = performance.now(); };
+document.addEventListener("pointerup", endDrag);
+document.addEventListener("pointercancel", endDrag);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ ensureFresh(); finishChallenges(); render(); refreshEvent(); if(cloud.session && !cloud.conflict) syncCloud(); } });
+
+// Re-draw after the shared settings load, unless someone is typing
+function refreshEvent(){
+  const sig = () => JSON.stringify([eventMult(), eventSettings.banner, eventSettings.until]);
+  const before = sig();
+  loadEvent().then(ok=>{
+    const a = document.activeElement;
+    if(ok && sig() !== before && !(a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName))) render();
+  });
+}
+setInterval(()=>{ if(!document.hidden && ONLINE) refreshEvent(); }, 300000);
+handleOAuthReturn().then(()=>{ if(cloud.session) syncCloud().then(()=>render()); else render(); });
+setInterval(()=>{ if(!document.hidden && cloud.session && !cloud.conflict) syncCloud(); }, 120000);
+refreshEvent();
+finishChallenges();
+render();
+if(HAS3D && !REDUCED) requestAnimationFrame(loop);
+</script>
+</body>
+</html>
