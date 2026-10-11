@@ -1952,6 +1952,21 @@ function applyName(){
   save();
   return true;
 }
+const LATER_KEY = "questopia-signin-later";
+function signinAsked(){ try{ return !!localStorage.getItem(LATER_KEY); }catch(e){ return true; } }
+function markSigninAsked(){ try{ localStorage.setItem(LATER_KEY, "1"); }catch(e){} }
+let askSignIn = false;
+function signinPromptView(){
+  return `
+  <section class="welcome">
+    <p class="wordmark">Questopia</p>
+    <h2>Welcome, ${esc(state.username||"")}!</h2>
+    <p>Sign in with Google to keep your quests, avatar and friends safe online, so you never lose them. You can also do this later from the menu.</p>
+    <button class="btn solid wide" data-act="signin-google">Sign in with Google</button>
+    <button class="btn wide" data-act="signin-later" style="margin-top:10px">I'll do this later</button>
+    <p class="fine"><a href="privacy.html">Privacy</a></p>
+  </section>`;
+}
 function welcomeView(){
   return `
   <section class="welcome">
@@ -3705,8 +3720,12 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.35";
+const APP_VERSION = "1.36";
 const UPDATES = [
+  { v:"1.36", name:"Sign in later", date:"Oct 11", notes:[
+    "After you pick a username you can sign in with Google or tap \"I'll do this later\".",
+    "It only asks once, and it never asks again when you open the website."] },
+  {v:"1.36",name:"Sign in later",date:"Oct 11, 2026",notes:["After you pick a username, you can sign in with Google or tap \"I'll do this later\".","It only asks once. It never asks again when you open the website."]},
   { v:"1.35", name:"Spider fix", date:"Oct 11", notes:[
     "The Halloween spider now stays on its thread, and the cobweb, spider and pumpkins sit behind the game so they never cover text."] },
   { v:"1.34", name:"Real sunsets", date:"Oct 11", notes:[
@@ -4242,7 +4261,7 @@ function render(){
   if(!inShop && (tryTitle || Object.keys(tryGear).length)){ clearTryOn(); setAvatar(); } // try-on never outlives the Shop
   const welcome = !state.username;
   document.getElementById("app").innerHTML =
-    welcome ? welcomeView() : editing ? editorView() : inAccount ? accountView() : inAdmin ? adminView() : inActivity ? activityView() : inWalks ? walksView() : inUpdates ? updatesView() : inGifts ? giftsView() : inHunts ? huntsView() : inTtt ? tttView() : inLocker ? lockerView() : inShop ? shopView()
+    welcome ? welcomeView() : askSignIn ? signinPromptView() : editing ? editorView() : inAccount ? accountView() : inAdmin ? adminView() : inActivity ? activityView() : inWalks ? walksView() : inUpdates ? updatesView() : inGifts ? giftsView() : inHunts ? huntsView() : inTtt ? tttView() : inLocker ? lockerView() : inShop ? shopView()
     : friendsPage==="requests" ? requestsView() : friendsPage==="profile" ? profileView()
     : friendsPage==="friend-locker" ? friendLockerView() : friendsPage==="new-challenge" ? newChallengeView() : friendsPage==="challenge" ? challengeView()
     : friendsPage ? friendsView() : mainView();
@@ -4338,6 +4357,8 @@ document.addEventListener("click", e=>{
   else if(act==="close-locker"){ inLocker=false; pendingBuy=null; render(); window.scrollTo(0,0); }
   else if(act==="open-account"){ inAccount=true; render(); window.scrollTo(0,0); }
   else if(act==="close-account"){ inAccount=false; render(); window.scrollTo(0,0); }
+  else if(act==="signin-google"){ askSignIn=false; markSigninAsked(); signInWith("google"); }
+  else if(act==="signin-later"){ askSignIn=false; markSigninAsked(); render(); window.scrollTo(0,0); }
   else if(act==="sign-in"){ signInWith(el.dataset.provider); }
   else if(act==="sign-out"){ signOut(); render(); }
   else if(act==="save-now"){ cloud.status = "Saving..."; render(); pushCloud(); }
@@ -4436,7 +4457,10 @@ document.addEventListener("submit", e=>{
   if(e.target.id === "addForm"){ e.preventDefault(); addFriendByCode(document.getElementById("fcode").value); return; }
   if(e.target.id !== "nameForm") return;
   e.preventDefault();
-  if(applyName()) render();
+  if(applyName()){
+    if(!signinAsked() && ONLINE && PROVIDERS.google && !cloud.session){ askSignIn = true; markSigninAsked(); }
+    render();
+  }
 });
 document.addEventListener("input", e=>{
   if(e.target.id === "rwd"){
