@@ -1537,6 +1537,33 @@ function adoptCloud(row){
   try{ localStorage.setItem(KEY, JSON.stringify(cs)); }catch(e){}
   location.reload();
 }
+// Combine two saves of the same account so nothing is lost (used instead of asking)
+function mergeSaves(loc, cl, unsynced){
+  const uni = (a,b)=>Array.from(new Set([].concat(a||[], b||[])));
+  const m = Object.assign({}, cl, loc);                       // this device wins for looks/settings it changed
+  const le = loc.earnedTotal||0, ce = cl.earnedTotal||0;
+  const ls = Math.max(0, le-(loc.points||0)), cs = Math.max(0, ce-(cl.points||0));
+  const earned = unsynced ? le+ce : Math.max(le,ce);          // never-synced device: its points were earned separately
+  const spent = unsynced ? ls+cs : Math.max(ls,cs);
+  m.earnedTotal = earned; m.points = Math.max(0, earned-spent);
+  m.owned = uni(loc.owned, cl.owned); m.friends = uni(cl.friends, loc.friends); m.huntClaimed = uni(cl.huntClaimed, loc.huntClaimed);
+  m.requests = cl.requests || loc.requests || [];
+  m.paid = Object.assign({}, cl.paid, loc.paid);
+  m.challenges = (cl.challenges && cl.challenges.length >= (loc.challenges||[]).length) ? cl.challenges : loc.challenges;
+  ["daily","weekly"].forEach(k=>{
+    const a = loc[k]||{}, b = cl[k]||{};
+    m[k] = a.key===b.key ? { key:a.key, done:uni(a.done,b.done) } : ((a.key||"") >= (b.key||"") ? a : b);
+  });
+  const sa = loc.season||{}, sb = cl.season||{};
+  if(sa.id===sb.id){
+    const counts = Object.assign({}, sb.counts);
+    Object.keys(sa.counts||{}).forEach(k=>{ counts[k] = Math.max(counts[k]||0, sa.counts[k]); });
+    m.season = Object.assign({}, sb, sa, { counts, claimed:uni(sa.claimed, sb.claimed), last:Object.assign({}, sb.last, sa.last) });
+  } else m.season = (sa.id||"") > (sb.id||"") ? sa : sb;
+  m.friendCode = cl.friendCode || loc.friendCode;
+  if(!m.look) m.look = cl.look;
+  return m;
+}
 // Check the online save: load it, upload ours, or ask which to keep
 async function syncCloud(){
   if(!ONLINE || !cloud.session) return;
@@ -1546,7 +1573,14 @@ async function syncCloud(){
     const same = state.syncedAt && Date.parse(row.updated_at) === Date.parse(state.syncedAt);
     if(same){ if(state.dirty) await pushCloud(); return; }
     if(!hasProgress() || (state.syncedAt && !state.dirty)) return adoptCloud(row);
-    cloud.conflict = { row }; inAccount = true; render();
+    // Same account on two devices: combine both saves instead of asking
+    backupSave(state, "before combining");
+    const merged = mergeSaves(state, row.state, !state.syncedAt);
+    state = Object.assign(merged, { dirty:true, syncedAt:row.updated_at });
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+    await pushCloud();
+    try{ sessionStorage.setItem("questopia-merged","1"); }catch(e){}
+    location.reload();
   }catch(e){ cloud.status = "Couldn't reach the online save"; }
 }
 // Back from Google/Apple: the address holds the sign-in tokens
@@ -2363,6 +2397,7 @@ async function getWake(){
   }catch(e){}
 }
 function releaseWake(){ try{ if(wakeLock) wakeLock.release(); }catch(e){} wakeLock = null; }
+try{ if(sessionStorage.getItem("questopia-merged")){ sessionStorage.removeItem("questopia-merged"); setTimeout(()=>toast("Your saves were combined"), 600); } }catch(e){}
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && live && watchId != null) getWake(); });
 
 function beginActivity(quest, startAt){
@@ -3742,7 +3777,8 @@ const UPDATES = [
   { v:"1.36", name:"Sign in later", date:"Oct 11", notes:[
     "After you pick a username you can sign in with Google or tap \"I'll do this later\".",
     "It only asks once, and it never asks again when you open the website.",
-    "Points safety: when your online save and this device differ, the one with more points is marked, you must tap twice before points get replaced, and the save you did not pick is kept as a backup you can bring back from the Account page."] },
+    "Same account, one save: if this device and your online save differ, the game now combines them automatically (points, items, friends and quests) so nothing is lost.",
+    "A backup of this device's save from before combining is kept, and you can bring it back from the Account page."] },
   {v:"1.36",name:"Sign in later",date:"Oct 11, 2026",notes:["After you pick a username, you can sign in with Google or tap \"I'll do this later\".","It only asks once. It never asks again when you open the website."]},
   { v:"1.35", name:"Spider fix", date:"Oct 11", notes:[
     "The Halloween spider now stays on its thread, and the cobweb, spider and pumpkins sit behind the game so they never cover text."] },
