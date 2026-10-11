@@ -47,6 +47,8 @@ html[data-holiday]{--paper:rgba(252,254,249,.6)}
 html[data-holiday] .panel,html[data-holiday] .tabs,html[data-holiday] .group,html[data-holiday] .menu-panel,html[data-holiday] .holi-chip{-webkit-backdrop-filter:blur(.6px);backdrop-filter:blur(.6px)}
 .holi-chip{display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:700;color:var(--muted)}
 .h-corner{position:absolute}
+.sun-btn{white-space:nowrap}
+.q-meta .sun-tag{display:block;flex-basis:100%;min-width:0;white-space:normal;font-size:13px;font-weight:700;color:#A0522D}
 /* falling / rising things */
 .h-fall,.h-rise{position:absolute;top:0;animation:hFall linear infinite}
 .h-rise{animation-name:hRise}
@@ -596,6 +598,7 @@ canvas{display:block}
   <main id="app"></main>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="sunPhoto" accept="image/*" capture="environment" hidden>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -1225,7 +1228,7 @@ const DAILY_POOL = [
   { id:"d6",  title:"Sit outside and chill for 10 minutes", pts:10 },
   { id:"d7",  title:"Walk or bike somewhere instead of getting a ride", pts:15 },
   { id:"d8",  title:"Shoot hoops, kick a ball or toss a frisbee for 10 minutes", pts:15 },
-  { id:"d9",  title:"Watch the sunrise or sunset", pts:15 },
+  { id:"d9",  title:"Watch the sunset", pts:15 },
   { id:"d10", title:"Stretch or work out outside for 10 minutes", pts:15 },
   { id:"d11", title:"Take a 20-minute walk", pts:15 },
   { id:"d12", title:"Pick up 5 pieces of trash", pts:10 },
@@ -1268,6 +1271,112 @@ const MINS = { d1:5,d2:10,d3:10,d4:5,d5:5,d6:10,d7:10,d8:10,d9:10,d10:10,d11:20,
   s1:10,s2:20,s3:10,s4:60,s5:90 };
 const minsFor = id => MINS[id] || 10;
 const ONCE_A_DAY = new Set(["s1","s2"]); // sunsets and new parks: one log per day
+
+/* ---------- Sunset quests ----------
+   There's one sunset a day, so: a sunset quest can only be started during the sunset window
+   (45 minutes before sunset until 20 minutes after), only one sunset quest counts per day, and
+   finishing one needs a photo of the sunset taken right then. The sunset time comes from a rough
+   location (rounded to about 10 km) that stays on this device. The photo is checked on the phone
+   and never uploaded or saved. */
+const SUNSET_QUESTS = new Set(["d9","w9","s1"]);
+const SUN_KEY = "questopia-sun-v1";
+const SUN_BEFORE = 45, SUN_AFTER = 20, SUN_PHOTO_AFTER = 50;   // minutes around sunset
+let sunLoc = null; try{ const v = JSON.parse(localStorage.getItem(SUN_KEY) || "null"); if(v && Number.isFinite(v.lat) && Number.isFinite(v.lon)) sunLoc = v; }catch(e){}
+let sunBusy = false, sunPhotoFor = null;
+// Sunset time for a day at a place (the standard NOAA / SunCalc formula)
+function sunsetAt(date, lat, lon){
+  const rad = Math.PI/180, dayMs = 864e5, J1970 = 2440588, J2000 = 2451545, J0 = .0009;
+  const noonLocal = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+  const d = noonLocal.valueOf()/dayMs - .5 + J1970 - J2000, lw = rad * -lon, phi = rad * lat;
+  const n = Math.round(d - J0 - lw/(2*Math.PI)), ds = J0 + lw/(2*Math.PI) + n;
+  const M = rad*(357.5291 + .98560028*ds), C = rad*(1.9148*Math.sin(M) + .02*Math.sin(2*M) + .0003*Math.sin(3*M));
+  const L = M + C + rad*102.9372 + Math.PI, dec = Math.asin(Math.sin(L)*Math.sin(rad*23.4397));
+  const cosw = (Math.sin(rad*-.833) - Math.sin(phi)*Math.sin(dec)) / (Math.cos(phi)*Math.cos(dec));
+  if(cosw < -1 || cosw > 1) return null;   // no sunset that day (far north or south)
+  const a = J0 + (Math.acos(cosw) + lw)/(2*Math.PI) + n;
+  const Jset = J2000 + a + .0053*Math.sin(M) - .0069*Math.sin(2*L);
+  return new Date((Jset + .5 - J1970)*dayMs);
+}
+function sunWindow(){
+  if(!sunLoc) return null;
+  const set = sunsetAt(new Date(), sunLoc.lat, sunLoc.lon); if(!set) return null;
+  return { set, open:new Date(set - SUN_BEFORE*60000), close:new Date(+set + SUN_AFTER*60000), photoBy:new Date(+set + SUN_PHOTO_AFTER*60000) };
+}
+const fmtClock = d => d.toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+const sunDoneToday = () => state.sunDay === dayKey();
+function sunFind(){
+  if(sunBusy) return;
+  if(!("geolocation" in navigator)){ toast("This device can't tell where you are, so the sunset time can't be found."); return; }
+  sunBusy = true; render();
+  navigator.geolocation.getCurrentPosition(p=>{
+    sunLoc = { lat:Math.round(p.coords.latitude*10)/10, lon:Math.round(p.coords.longitude*10)/10 };   // about 10 km, kept on this device only
+    try{ localStorage.setItem(SUN_KEY, JSON.stringify(sunLoc)); }catch(e){}
+    sunBusy = false; const w = sunWindow(); if(w) toast(`Sunset today: ${fmtClock(w.set)}`); render();
+  }, ()=>{ sunBusy = false; toast("Allow location to find your sunset time. Only a rough area is used, and it stays on your phone."); render(); },
+  { enableHighAccuracy:false, maximumAge:6*3600000, timeout:20000 });
+}
+// what the sunset quest's button should be when it isn't running
+function sunsetGate(kind, id){
+  if(sunDoneToday()) return `<button class="btn" disabled>Tomorrow</button>`;
+  if(!sunLoc) return `<button class="btn" data-act="sun-find" ${sunBusy?"disabled":""}>${sunBusy?"Finding...":"Sunset time"}</button>`;
+  const w = sunWindow(), now = Date.now();
+  if(!w) return `<button class="btn" disabled>No sunset</button>`;
+  if(now < w.open) return `<button class="btn" disabled>Opens ${fmtClock(w.open)}</button>`;
+  if(now > w.close) return `<button class="btn" disabled>Missed today</button>`;
+  return `<button class="btn solid" data-act="start" data-kind="${kind}" data-id="${id}">Start</button>`;
+}
+function sunsetMeta(id){
+  if(!SUNSET_QUESTS.has(id)) return "";
+  if(sunDoneToday()) return `<span class="sun-tag">🌅 One sunset a day · done today</span>`;
+  const w = sunWindow();
+  return w ? `<span class="sun-tag">🌅 Sunset ${fmtClock(w.set)} · 📷 photo needed</span>` : `<span class="sun-tag">🌅 Sunset only · 📷 photo needed</span>`;
+}
+function sunPhotoOpen(kind, id){
+  if(!timerDone(kind, id)) return;
+  sunPhotoFor = { kind, id };
+  const f = document.getElementById("sunPhoto"); if(f) f.click();
+}
+// a quick look at the colors: a sunset has a good share of orange, red, pink or purple sky
+async function sunLooksRight(file){
+  try{
+    const bmp = await createImageBitmap(file), c = document.createElement("canvas"); c.width = 64; c.height = 64;
+    const x = c.getContext("2d"); x.drawImage(bmp, 0, 0, 64, 64);
+    const px = x.getImageData(0,0,64,64).data; let warm = 0;
+    for(let i=0;i<px.length;i+=4){
+      const r = px[i]/255, g = px[i+1]/255, b = px[i+2]/255, mx = Math.max(r,g,b), mn = Math.min(r,g,b), dlt = mx - mn;
+      if(mx < .2 || dlt/mx < .22) continue;
+      let h = mx===r ? ((g-b)/dlt) % 6 : mx===g ? (b-r)/dlt + 2 : (r-g)/dlt + 4; h *= 60; if(h < 0) h += 360;
+      if(h <= 55 || h >= 255) warm++;
+    }
+    return warm / 4096 >= .06;
+  }catch(e){ return true; }   // can't read it here: let it through
+}
+async function sunPhotoGot(file){
+  const target = sunPhotoFor; sunPhotoFor = null;
+  if(!target || !file) return;
+  if(!/^image\//.test(file.type || "image/")){ toast("That isn't a photo."); return; }
+  const w = sunWindow(), now = Date.now();
+  if(w && now > +w.photoBy){ toast("The sunset is over for today. Try again tomorrow."); return; }
+  if(file.lastModified && (now - file.lastModified > 30*60000 || (w && file.lastModified < +w.open - 5*60000))){
+    toast("Take a new photo of tonight's sunset. Older pictures don't count."); return;
+  }
+  if(!(await sunLooksRight(file))){ toast("That doesn't look like a sunset. Point your camera at the sky where the sun is going down."); return; }
+  if(!activeFor(target.kind, target.id)) return;
+  sunPhotoOk = true;
+  if(target.kind==="season") logSeasonQuest(target.id); else toggle(target.kind, target.id);
+  sunPhotoOk = false;
+  state.sunDay = dayKey(); save(); render();
+  toast("Beautiful sunset! 🌅");
+}
+let sunPhotoOk = false;
+// redraw when the sunset window opens or closes, so the button changes on its own
+let sunPhase = "";
+setInterval(()=>{
+  if(typeof state === "undefined" || !state.username) return;
+  const w = sunWindow(), now = Date.now();
+  const ph = [sunDoneToday(), !w ? "x" : now < w.open ? "early" : now <= w.close ? "open" : "late"].join();
+  if(ph !== sunPhase){ const first = !sunPhase; sunPhase = ph; if(!first) softRender(); }
+}, 30000);
 
 /* ---------- Helpers ---------- */
 const pad = n => String(n).padStart(2,"0");
@@ -1670,6 +1779,13 @@ function startQuest(kind, id){
   const cur = runningQuest();
   if(cur){ const cq = qInfo(cur.kind, cur.id); toast(`Finish or cancel "${cq?cq.title:"your quest"}" first.`); return false; }
   if(kind==="season" && ONCE_A_DAY.has(id) && (state.season.last||{})[id]===dayKey()){ toast("Nice! Come back tomorrow for the next one."); return false; }
+  if(SUNSET_QUESTS.has(id)){   // sunsets: one a day, and only while the sun is going down
+    if(sunDoneToday()){ toast("There's only one sunset a day. Come back tomorrow!"); return false; }
+    const w = sunWindow(), now = Date.now();
+    if(!w){ sunFind(); return false; }
+    if(now < w.open){ toast(`Too early! The sunset is at ${fmtClock(w.set)}. This opens at ${fmtClock(w.open)}.`); return false; }
+    if(now > w.close){ toast("Today's sunset is over. Try again tomorrow!"); return false; }
+  }
   state.active = { kind, id, key:bucketKey(kind), start:Date.now(), mins:minsFor(id) };
   save(); render();
   return true;
@@ -1695,16 +1811,25 @@ function questButton(kind, id, done, logAct){
     return a ? `<button class="btn solid" data-act="open-activity">Open Activity</button>`
              : `<button class="btn solid" data-act="start-activity" data-kind="${kind}" data-id="${id}">Start Activity</button>`;
   }
-  if(!a) return `<button class="btn" data-act="start" data-kind="${kind}" data-id="${id}">Start</button>`;
+  if(!a) return SUNSET_QUESTS.has(id) ? sunsetGate(kind, id) : `<button class="btn" data-act="start" data-kind="${kind}" data-id="${id}">Start</button>`;
   const l = leftMs(a);
   if(l > 0) return `<button class="btn timer" disabled data-countdown="${kind}:${id}" aria-label="Time left">${fmtLeft(l)}</button>`;
+  if(SUNSET_QUESTS.has(id)) return `<button class="btn solid sun-btn" data-act="sun-photo" data-kind="${kind}" data-id="${id}">Photo</button>`;
   return `<button class="btn solid" data-act="${act}" data-kind="${kind}" data-id="${id}">Complete</button>`;
 }
 function questMeta(kind, q){
   const a = activeFor(kind, q.id);
   return `<span>${minsFor(q.id)>=60 ? minsFor(q.id)/60+" hr" : minsFor(q.id)+" min"}</span>` +
-    (GPS_QUESTS[q.id] ? `<span class="gps-tag">GPS · ${GPS_QUESTS[q.id].mi} mi</span>` : "") +
+    (GPS_QUESTS[q.id] ? `<span class="gps-tag">GPS · ${GPS_QUESTS[q.id].mi} mi</span>` : "") + sunsetMeta(q.id) +
     (a ? `<button class="linkbtn" data-act="cancel">Cancel</button>` : "");
+}
+function logSeasonQuest(id){
+  if(GPS_QUESTS[id]){ toast("This one needs an Activity. Tap Start Activity."); return; }
+  if(SUNSET_QUESTS.has(id) && !sunPhotoOk){ toast("Take a photo of the sunset to finish this one."); return; }
+  if(!timerDone("season", id)) return;
+  state.active = null;
+  state.season.last = Object.assign(state.season.last||{}, { [id]: dayKey() });
+  bumpSeason(id, 1); save(); render();
 }
 function toggle(kind, id){
   const pool = kind==="daily" ? DAILY_POOL : WEEKLY_POOL;
@@ -1722,6 +1847,7 @@ function toggle(kind, id){
     if(kind==="daily") bumpSeason("s6",-1);
   } else {
     if(GPS_QUESTS[id]){ toast("This one needs an Activity. Tap Start Activity."); return; } // walk quests are only completed by a finished GPS Activity
+    if(SUNSET_QUESTS.has(id) && !sunPhotoOk){ toast("Take a photo of the sunset to finish this one."); return; }
     if(!timerDone(kind, id)) return;
     state.active = null;
     bucket.done.push(id);
@@ -3578,8 +3704,12 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.33";
+const APP_VERSION = "1.34";
 const UPDATES = [
+  { v:"1.34", name:"Real sunsets", date:"Oct 11", notes:[
+    "Sunset quests only open during the <b>sunset hour</b> (45 minutes before sunset until 20 minutes after). The game shows today's sunset time.",
+    "There's only one sunset a day, so only <b>one sunset quest counts per day</b>.",
+    "To finish one, take a <b>photo of the sunset</b>. The photo is checked on your phone and never uploaded or saved."] },
   { v:"1.33", name:"Animated holidays", date:"Oct 11", notes:[
     "Every month now has its own <b>animated holiday scene</b> in the background.",
     "Halloween: a spider swinging from a cobweb in the corner, bats and glowing pumpkins. Christmas: Santa's sleigh flies across the sky while it snows.",
@@ -4100,6 +4230,7 @@ document.addEventListener("dragstart", e=>{
   try{ e.dataTransfer.setData("DownloadURL", `application/json:${giftFileName(giftMade.item)}:${giftBlob}`); }catch(err){}
   e.dataTransfer.effectAllowed = "copy";
 });
+document.addEventListener("change", e=>{ if(e.target.id==="sunPhoto"){ const f = e.target.files && e.target.files[0]; e.target.value = ""; sunPhotoGot(f); } });
 document.addEventListener("change", e=>{ if(e.target.id==="giftFile"){ const f = e.target.files && e.target.files[0]; e.target.value = ""; giftHandleFile(f); } });
 document.addEventListener("keydown", e=>{ if((e.key==="Enter"||e.key===" ") && e.target.id==="giftDrop"){ e.preventDefault(); const f = document.getElementById("giftFile"); if(f) f.click(); } });
 
@@ -4285,14 +4416,9 @@ document.addEventListener("click", e=>{
   else if(act==="toggle"){ toggle(el.dataset.kind, el.dataset.id); }
   else if(act==="start"){ startQuest(el.dataset.kind, el.dataset.id); }
   else if(act==="cancel"){ cancelQuest(); }
-  else if(act==="log"){
-    const id = el.dataset.id;
-    if(GPS_QUESTS[id]){ toast("This one needs an Activity. Tap Start Activity."); return; }
-    if(!timerDone("season", id)) return;
-    state.active = null;
-    state.season.last = Object.assign(state.season.last||{}, { [id]: dayKey() });
-    bumpSeason(id, 1); save(); render();
-  }
+  else if(act==="log"){ logSeasonQuest(el.dataset.id); }
+  else if(act==="sun-find"){ sunFind(); }
+  else if(act==="sun-photo"){ sunPhotoOpen(el.dataset.kind, el.dataset.id); }
 });
 document.addEventListener("submit", e=>{
   if(e.target.id === "adminLogin"){
