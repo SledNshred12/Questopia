@@ -912,16 +912,14 @@ function buildHuman(look, gear){
     const hg = new THREE.Group(); hg.position.set(0,1.56,-.01); hg.rotation.x = -.45;
     const buzz = t==="buzz" || t==="mohawk";   // mohawk has shaved sides
     hg.add(new THREE.Mesh(
-      new THREE.SphereGeometry(buzz?.372:.385,28,16,0,Math.PI*2,0,Math.PI*(buzz?.44:.5)), hair));
+      new THREE.SphereGeometry(buzz?.372:.385,28,16,0,Math.PI*2,0,Math.PI*(buzz?.44:(t==="short"?.56:.5))), hair));
     if(t==="short"){
-      // a little longer: a swept fringe, plus hair that comes down over the ears and the back of the neck
+      // a bit longer than before: a fuller cap that comes down over the ears and nape, with a soft swept fringe
+      hg.add(part(new THREE.SphereGeometry(.392,28,16,0,Math.PI*2,Math.PI*.46,Math.PI*.13), hair, 0,0,0));   // extra length around the lower edge
       if(!hatOn){
-        const f = part(new THREE.SphereGeometry(.15,16,12), hair, .05,1.67,.27);
-        f.scale.set(1.65,.55,.85); f.rotation.z = .12; g.add(f);
-        const f2 = part(new THREE.SphereGeometry(.1,14,10), hair, -.17,1.64,.27);
-        f2.scale.set(1.2,.6,.8); f2.rotation.z = -.35; g.add(f2);
+        const f = part(new THREE.SphereGeometry(.15,18,12), hair, .06,1.725,.235);
+        f.scale.set(1.5,.5,.8); f.rotation.z = .18; f.rotation.x = -.25; g.add(f);
       }
-      g.add(part(new THREE.SphereGeometry(.392,28,12,Math.PI/2+1.15,Math.PI*2-2.3,Math.PI*.46,Math.PI*.27), hair, 0,1.55,-.005));
     }
     if(t==="curly"){
       for(const [pol, n] of [[.25,1],[.7,6],[1.1,9],[1.3,10]]){
@@ -3441,8 +3439,10 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.27";
+const APP_VERSION = "1.28";
 const UPDATES = [
+  { v:"1.28", name:"Cleaner short hair", date:"Oct 10", notes:[
+    "The <b>Short</b> hair got a cleaner look: a fuller cap that covers the ears and back of the neck, and a softer fringe that no longer sits over the eyes."] },
   { v:"1.27", name:"Longer short hair", date:"Oct 10", notes:[
     "The <b>Short</b> hair style is a little longer now, with a swept fringe and hair over the ears and the back of the neck.",
     "The <b>Afro</b> now flattens under a hat, like the other tall styles."] },
