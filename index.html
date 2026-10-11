@@ -522,7 +522,8 @@ const OPTS = {
   shoes:[["White","#F0F0F0"],["Black","#26282C"],["Brown","#5A3E2B"],["Red","#D64545"],
         ["Blue","#3B6FD6"],["Green","#3E8E5A"],["Yellow","#F2C12E"],["Pink","#F08AB5"]]
 };
-const HAIR_TYPES = [["short","Short"],["curly","Curly"],["bun","Bun"],["long","Long"],["ponytail","Ponytail"],["buzz","Buzz"],["bald","Bald"]];
+const HAIR_TYPES = [["short","Short"],["curly","Curly"],["bun","Bun"],["long","Long"],["ponytail","Ponytail"],["buzz","Buzz"],["bald","Bald"],
+  ["spiky","Spiky"],["mohawk","Mohawk"],["afro","Afro"],["pigtails","Pigtails"],["bob","Bob"],["braid","Braid"],["spacebuns","Space buns"]];
 const EYE_TYPES  = [["round","Round"],["wide","Wide"],["happy","Happy"],["sleepy","Sleepy"],["sparkle","Sparkle"]];
 /* ---------- Locker items: [id, name, cost in points]. Cost 0 means everyone has it. ---------- */
 const CATS = [
@@ -909,7 +910,7 @@ function buildHuman(look, gear){
   const t = look.hairType;
   if(t!=="bald"){
     const hg = new THREE.Group(); hg.position.set(0,1.56,-.01); hg.rotation.x = -.45;
-    const buzz = t==="buzz";
+    const buzz = t==="buzz" || t==="mohawk";   // mohawk has shaved sides
     hg.add(new THREE.Mesh(
       new THREE.SphereGeometry(buzz?.372:.385,28,16,0,Math.PI*2,0,Math.PI*(buzz?.44:.5)), hair));
     if(t==="short" && !hatOn){
@@ -929,6 +930,50 @@ function buildHuman(look, gear){
     }
     if(t==="bun" && !hatOn) hg.add(part(new THREE.SphereGeometry(.15,16,12), hair, 0,.4,-.14));
     g.add(hg);
+    // new styles: pieces are placed around the head, whose centre is (0,1.55,0)
+    const spike = (nx, ny, nz, len, rad) => {   // a cone sticking out of the head along the direction (nx,ny,nz)
+      const n = new THREE.Vector3(nx,ny,nz).normalize(), c = part(new THREE.ConeGeometry(rad,len,10), hair, n.x*(.36+len*.4), 1.55+n.y*(.36+len*.4), n.z*(.36+len*.4));
+      c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), n); g.add(c);
+    };
+    if(t==="spiky" && !hatOn){
+      for(const [pol,n] of [[.0,1],[.45,5],[.85,8],[1.2,9]]){
+        for(let i=0;i<n;i++){
+          const az = n===1 ? 0 : (i/n)*Math.PI*2 + pol;
+          const x = Math.sin(pol)*Math.sin(az), y = Math.cos(pol), z = Math.sin(pol)*Math.cos(az);
+          if(pol>.7 && z>.25) continue;   // keep the face and forehead clear
+          spike(x,y,z, .2 - pol*.05, .075);
+        }
+      }
+    }
+    if(t==="mohawk" && !hatOn){
+      for(let i=0;i<7;i++){
+        const a = -1.75 + i*.38, k = 1 - Math.abs(i-3)*.12;   // from the back, over the top, to the forehead
+        spike(0, Math.cos(a), Math.sin(a), .3*k, .085);
+      }
+    }
+    if(t==="afro"){
+      const af = part(new THREE.SphereGeometry(.48,28,20), hair, 0, hatOn ? 1.62 : 1.74, -.17);
+      af.scale.set(1.02,.95,.96); g.add(af);
+    }
+    if(t==="pigtails"){
+      for(const sd of [-1,1]){
+        const tail = part(new THREE.SphereGeometry(.1,14,12), hair, sd*.4,1.5,-.1);
+        tail.scale.set(1,2.6,1); tail.rotation.z = sd*.18; g.add(tail);
+        const band = new THREE.Mesh(new THREE.TorusGeometry(.07,.024,8,16), mat("#E86AA6"));
+        band.position.set(sd*.36,1.69,-.1); band.rotation.set(Math.PI/2 - .4, 0, sd*.5); g.add(band);
+      }
+    }
+    if(t==="bob"){
+      const bm = new THREE.MeshStandardMaterial({ color:look.hairColor, roughness:.8, side:THREE.DoubleSide });
+      g.add(part(new THREE.CylinderGeometry(.39,.33,.46,28,1,true,.9,Math.PI*2-1.8), bm, 0,1.46,-.02));
+    }
+    if(t==="braid"){
+      for(let i=0;i<6;i++) g.add(part(new THREE.SphereGeometry(.09-i*.006,12,10), hair, 0,1.46-i*.13,-.36-i*.012));
+      const tie = part(new THREE.SphereGeometry(.05,10,8), mat("#3B6FD6"), 0,1.46-6*.13+.02,-.43); g.add(tie);
+    }
+    if(t==="spacebuns" && !hatOn){
+      for(const sd of [-1,1]) g.add(part(new THREE.SphereGeometry(.14,16,12), hair, sd*.24,1.93,-.02));
+    }
     if(t==="long"){
       const back = part(new THREE.SphereGeometry(.38,20,16), hair, 0,1.25,-.2);
       back.scale.set(1,1.6,.55); g.add(back);
@@ -3390,8 +3435,11 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.25";
+const APP_VERSION = "1.26";
 const UPDATES = [
+  { v:"1.26", name:"New hair styles", date:"Oct 10", notes:[
+    "Seven new hair styles in the avatar editor: <b>Spiky, Mohawk, Afro, Pigtails, Bob, Braid</b> and <b>Space buns</b>.",
+    "They use your hair color, and they work with hats (the tall styles flatten out or hide under a hat)."] },
   { v:"1.25", name:"Beta Tester title", date:"Oct 10", notes:[
     "New <b>Beta Tester</b> title with a neon green glow. It is gift-only: open a Beta Tester code on the Gifts page to get it.",
     "Gift codes can now work for more than one player. The Beta Tester code works for up to 20 players, once each."] },
