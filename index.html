@@ -2998,7 +2998,7 @@ function tttClean(t){
   const out = { center:c, size:TTT_SIZES[t.size] ? t.size : "m", names:[nm(t.names&&t.names[0],"You"), nm(t.names&&t.names[1],"Player 2")],
     board, turn:t.turn==="O"?"O":"X", first:t.first==="O"?"O":"X", over:false, win:null, moves, practice:!!t.practice,
     mode:t.mode==="two"?"two":"one", paidGame:String(t.paidGame||"").slice(0,20),
-    room:t.room && /^[A-Z0-9]{5}$/.test(String(t.room.code)) ? { code:String(t.room.code), role:t.room.role==="O"?"O":"X" } : null,
+    room:t.room && /^[A-Z0-9]{5}$/.test(String(t.room.code)) ? { code:String(t.room.code), role:t.room.role==="O"?"O":"X", remote:!!t.room.remote } : null,
     score:{ X:n("X"), O:n("O"), D:n("D") }, paid:{ d:String(t.paid&&t.paid.d||"").slice(0,10), n:Math.max(0, Math.min(99, Math.floor(Number(t.paid&&t.paid.n)||0))) } };
   const w = tttWinner(board); if(w){ out.over = true; out.win = w; } else if(moves===9) out.over = true;
   return out;
@@ -3083,7 +3083,7 @@ function tttPlace(i){
 }
 function tttFinish(winner){
   tttFlash = winner ? `${tttName(winner)} (${winner}) wins!` : "It's a draw!";
-  if(ttt.practice) return;
+  if(ttt.practice || tttRemote()) return;   // practice and online games are just for fun
   const day = new Date().toISOString().slice(0,10);
   if(ttt.paid.d !== day) ttt.paid = { d:day, n:0 };
   if(ttt.paid.n < TTT_DAILY){ ttt.paid.n++; addPoints(TTT_PTS); save(); toast(`Game finished! +${TTT_PTS} points`); }
@@ -3111,9 +3111,9 @@ function tttDraw(cv){
   const dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth || 320, h = w;
   if(cv.width !== Math.round(w*dpr) || cv.height !== Math.round(h*dpr)){ cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
   const x = cv.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,w,h);
-  const u = w/5, S = tttS(), g = x.createLinearGradient(0,0,0,h); g.addColorStop(0,"#CFE8C4"); g.addColorStop(1,"#B9DDAE");
+  const rem = tttRemote(), span = rem ? 3.5 : 5, off = rem ? .25 : 1, u = w/span, S = tttS(), g = x.createLinearGradient(0,0,0,h); g.addColorStop(0,"#CFE8C4"); g.addColorStop(1,"#B9DDAE");
   x.fillStyle = g; x.fillRect(0,0,w,h);
-  const bx = u, by = u, bs = 3*u, my = ttt.practice ? -1 : tttMyCell();
+  const bx = off*u, by = off*u, bs = 3*u, my = (ttt.practice || rem) ? -1 : tttMyCell();
   x.fillStyle = "rgba(255,255,255,.55)"; x.fillRect(bx,by,bs,bs);
   if(my >= 0){ x.fillStyle = "rgba(46,94,62,.28)"; x.fillRect(bx + (my%3)*u, by + Math.floor(my/3)*u, u, u); }
   x.strokeStyle = "#2E5E3E"; x.lineWidth = 4; x.lineCap = "round";
@@ -3128,7 +3128,7 @@ function tttDraw(cv){
   if(ttt.win){ const a = ttt.win[0], b = ttt.win[2], p = i => [bx+(i%3)*u+u/2, by+Math.floor(i/3)*u+u/2];
     x.strokeStyle = "#F5B82E"; x.lineWidth = Math.max(7, u*.13); x.globalAlpha = .9; x.beginPath(); x.moveTo(...p(a)); x.lineTo(...p(b)); x.stroke(); x.globalAlpha = 1; }
   // compass
-  x.fillStyle = "#1F2A22"; x.font = "800 13px system-ui,sans-serif"; x.textAlign = "center"; x.fillText("N ↑", w/2, 18);
+  if(!rem){ x.fillStyle = "#1F2A22"; x.font = "800 13px system-ui,sans-serif"; x.textAlign = "center"; x.fillText("N ↑", w/2, 18); }
   // you
   if(!ttt.practice && ttt.center && tttPos){
     const o = tttOffset(tttPos.lat, tttPos.lon), W = 2.5*S;
@@ -3140,9 +3140,11 @@ function tttDraw(cv){
     x.beginPath(); x.arc(px,py,7,0,7); x.fillStyle = (tttTwo() ? tttRole() : ttt.turn)==="X" ? "#E8446B" : "#3A86FF"; x.fill();
     if(out){ x.fillStyle = "rgba(255,255,255,.9)"; x.fillRect(w/2-70, h-30, 140, 22); x.fillStyle = "#1F2A22"; x.font = "700 12px system-ui,sans-serif"; x.fillText("You're off the board", w/2, h-14); }
   }
+  if(!rem){
   // scale bar: one square
   x.strokeStyle = "#1F2A22"; x.lineWidth = 3; x.beginPath(); x.moveTo(10, h-12); x.lineTo(10+u, h-12); x.stroke();
   x.fillStyle = "#1F2A22"; x.font = "700 11px system-ui,sans-serif"; x.textAlign = "left"; x.fillText(`1 square = ${S} m (${TTT_SIZES[ttt.size][1]})`, 10, h-18);
+  }
 }
 
 /* screens */
@@ -3193,11 +3195,14 @@ const TTT_ROOM_ERRORS = {
   taken:"That square is taken.", not_playing:"The game isn't running right now.", busy:"The server is busy. Try again.", no_guest:"Your friend hasn't joined yet."
 };
 const tttTwo = () => ttt.mode === "two";
+const tttRemote = () => tttTwo() && !!(ttt.room && ttt.room.remote);
+let tttNewRemote = false;   // choice on the "make a room" screen
 const tttRole = () => ttt.room ? ttt.room.role : "X";
 const tttMyTurn = () => tttTwo() && !ttt.over && ttt.turn === tttRole();
 function tttRoomApply(v){
   if(!v || !v.ok){ return; }
-  tttRoom = v; ttt.room = { code:String(v.code).slice(0,5), role:v.role==="O"?"O":"X" };
+  tttRoom = v; ttt.room = { code:String(v.code).slice(0,5), role:v.role==="O"?"O":"X", remote:!!v.remote };
+  if(!v.remote && inTtt) tttStartWatch();   // only walking games need GPS
   ttt.size = TTT_SIZES[v.size] ? v.size : ttt.size;
   const nm = x => String(x||"").replace(/[^A-Za-z0-9 _]/g,"").slice(0,12);
   ttt.names = [nm(v.names && v.names[0]) || "Player 1", nm(v.names && v.names[1]) || "Player 2"];
@@ -3244,7 +3249,7 @@ async function tttRoomCall(fn, args, okFn){
   tttRoomBusy = false; render();
 }
 const myName = () => String(state.username||"Player").replace(/[^A-Za-z0-9 _]/g,"").slice(0,12) || "Player";
-function tttCreateRoom(){ ttt.center = null; tttRoomCall("ttt_create", { p_name:myName(), p_size:ttt.size }); }
+function tttCreateRoom(){ ttt.center = null; tttRoomCall("ttt_create", { p_name:myName(), p_size:ttt.size, p_remote:tttNewRemote }); }
 function tttJoinRoom(){ ttt.center = null; tttRoomCall("ttt_join", { p_code:tttCode, p_name:myName() }); }
 async function tttLeaveRoom(){
   const code = ttt.room && ttt.room.code;
@@ -3258,6 +3263,12 @@ function tttSetCenterTwo(){
   ttt.center = [tttPos.lat, tttPos.lon]; tttSave();
   tttRoomCall("ttt_ready", { p_code:ttt.room.code });
 }
+async function tttTapRemote(i){
+  if(ttt.over) return;
+  if(!tttMyTurn()){ tttFlash = `It's ${tttName(ttt.turn)}'s turn. Wait for them.`; render(); return; }
+  if(ttt.board[i]){ tttFlash = "That square is taken. Pick an empty one."; render(); return; }
+  return tttSendMove(i);
+}
 async function tttClaimTwo(){
   if(ttt.over) return;
   if(!tttMyTurn()){ tttFlash = `It's ${tttName(ttt.turn)}'s turn. Wait for them.`; render(); return; }
@@ -3267,6 +3278,9 @@ async function tttClaimTwo(){
   const i = tttMyCell();
   if(i < 0){ tttFlash = "You're outside the board. Walk onto a square first."; render(); return; }
   if(ttt.board[i]){ tttFlash = "That square is taken. Walk to an empty one."; render(); return; }
+  return tttSendMove(i);
+}
+async function tttSendMove(i){
   if(tttRoomBusy) return; tttRoomBusy = true; tttFlash = "";
   try{
     const v = await rpc("ttt_move", { p_code:ttt.room.code, p_cell:i });
@@ -3289,7 +3303,11 @@ function tttTwoView(back){
   if(!ttt.room || !tttRoom) return `${head}
     <p class="hunt-intro">Each player uses their <b>own phone</b>. Make a room and share the code, or type your friend's code.</p>
     <div class="group"><h3>Make a room</h3>
-      <div class="seg" role="group" aria-label="Square size">${Object.keys(TTT_SIZES).map(k=>`<button class="seg-btn" data-act="ttt-size" data-size="${k}" aria-pressed="${ttt.size===k}">${{s:"Small",m:"Medium",l:"Large"}[k]}<small>${TTT_SIZES[k][0]} m · ${TTT_SIZES[k][1]}</small></button>`).join("")}</div>
+      <div class="seg" role="group" aria-label="Where are you playing">
+        <button class="seg-btn" data-act="ttt-where" data-where="gps" aria-pressed="${!tttNewRemote}">Outside<small>Walk the squares (GPS)</small></button>
+        <button class="seg-btn" data-act="ttt-where" data-where="anywhere" aria-pressed="${tttNewRemote}">Anywhere<small>Tap squares, no GPS</small></button></div>
+      ${tttNewRemote ? `<p class="fine">Great for a friend who is far away. No location is used, and online games don't earn points.</p>`
+      : `<div class="seg" role="group" aria-label="Square size">${Object.keys(TTT_SIZES).map(k=>`<button class="seg-btn" data-act="ttt-size" data-size="${k}" aria-pressed="${ttt.size===k}">${{s:"Small",m:"Medium",l:"Large"}[k]}<small>${TTT_SIZES[k][0]} m · ${TTT_SIZES[k][1]}</small></button>`).join("")}</div>`}
       <button class="btn solid wide" data-act="ttt-create" ${tttRoomBusy?"disabled":""}>Make a room</button></div>
     <div class="group"><h3>Join a friend's room</h3>
       <input class="text code-in" id="tttCode" maxlength="5" placeholder="Enter the code" value="${esc(tttCode)}" autocomplete="off" autocapitalize="characters" spellcheck="false">
@@ -3299,7 +3317,7 @@ function tttTwoView(back){
   if(st === "waiting") return `${head}
     <div class="group"><h3>Your room code</h3>
       <div class="room-code" aria-label="Room code ${esc(code.split("").join(" "))}">${esc(code)}</div>
-      <p class="fine" style="text-align:center">Tell your friend this code. On their phone: Questopia, menu, GPS Tic-Tac-Toe, Two phones, then Join.</p>
+      <p class="fine" style="text-align:center">Tell your friend this code${tttNewRemote||(ttt.room&&ttt.room.remote)?" (this is an online game, so they can be anywhere)":""}. On their phone: Questopia, menu, GPS Tic-Tac-Toe, Two phones, then Join.</p>
       <p style="text-align:center"><span class="chip-gps wait">Waiting for your friend to join...</span></p>
       <button class="btn wide" data-act="ttt-leave">Cancel room</button></div>${err}</section>`;
   if(st === "setup"){
@@ -3313,19 +3331,19 @@ function tttTwoView(back){
       <button class="linkbtn" style="margin-top:12px" data-act="ttt-leave">Leave room</button></div>${err}</section>`;
   }
   // playing or done
-  const turn = ttt.turn, over = ttt.over, mine = tttMyTurn(), role = tttRole(), gs = tttStatus();
+  const turn = ttt.turn, over = ttt.over, mine = tttMyTurn(), role = tttRole(), gs = tttStatus(), rem = tttRemote();
   const headTurn = over ? `<div class="ttt-turn over">${esc(tttFlash || "Game over")}</div>`
-    : `<div class="ttt-turn"><span class="mk ${turn.toLowerCase()}">${turn}</span><span><b>${mine ? "Your turn" : esc(tttName(turn)) + "'s turn"}</b><small>${mine ? "Walk onto a square, then tap Claim" : "Waiting for them to claim a square..."}</small></span></div>`;
+    : `<div class="ttt-turn"><span class="mk ${turn.toLowerCase()}">${turn}</span><span><b>${mine ? "Your turn" : esc(tttName(turn)) + "'s turn"}</b><small>${mine ? (rem ? "Tap a square to claim it" : "Walk onto a square, then tap Claim") : "Waiting for them to claim a square..."}</small></span></div>`;
   return `${head}
     ${headTurn}
-    <p><span id="tttChip" class="chip-gps ${gs[0]}">${esc(gs[1])}</span> <span class="chip-gps">You are ${role}</span></p>
+    <p>${rem ? "" : `<span id="tttChip" class="chip-gps ${gs[0]}">${esc(gs[1])}</span> `}<span class="chip-gps">You are ${role}</span>${rem ? ` <span class="chip-gps">Online game</span>` : ""}</p>
     <div class="ttt-board"><canvas data-ttt role="img" aria-label="Tic-tac-toe board"></canvas></div>
     ${!over && tttFlash ? `<p class="err">${esc(tttFlash)}</p>` : ""}${err}
     ${over ? `<button class="btn solid wide" data-act="ttt-rematch">Play again</button>`
-           : `<button class="btn solid wide" data-act="ttt-claim" ${mine ? "" : "disabled"}>Claim this square</button>`}
+           : rem ? "" : `<button class="btn solid wide" data-act="ttt-claim" ${mine ? "" : "disabled"}>Claim this square</button>`}
     <div class="ttt-score"><div><span class="mk x">X</span><b>${ttt.score.X}</b><small>${esc(ttt.names[0])}</small></div><div><b>${ttt.score.D}</b><small>Draws</small></div><div><span class="mk o">O</span><b>${ttt.score.O}</b><small>${esc(ttt.names[1])}</small></div></div>
-    <div class="ttt-row"><button class="btn" data-act="ttt-reset-center">${tttConfirmReset ? "Tap again" : "Reset my center"}</button><button class="btn" data-act="ttt-leave">Leave room</button></div>
-    <p class="fine">Reset your center only if the board drifted: stand in the middle square first. You earn ${TTT_PTS} points for each finished game, up to ${TTT_DAILY} a day.</p>
+    <div class="ttt-row">${rem ? "" : `<button class="btn" data-act="ttt-reset-center">${tttConfirmReset ? "Tap again" : "Reset my center"}</button>`}<button class="btn" data-act="ttt-leave">Leave room</button></div>
+    <p class="fine">${rem ? "Online games are just for fun, so no points. Your location is never used." : `Reset your center only if the board drifted: stand in the middle square first. You earn ${TTT_PTS} points for each finished game, up to ${TTT_DAILY} a day.`}</p>
   </section>`;
 }
 
@@ -3333,13 +3351,17 @@ function tttOpen(){
   inTtt = true; tttMsg = ""; tttFlash = "";
   tttPage = ttt.center ? "play" : "setup";
   if(tttTwo() && ttt.room) tttPoll();
-  if(!ttt.practice || tttTwo()) tttStartWatch();
+  if(tttTwo() ? (ttt.room && !ttt.room.remote) : !ttt.practice) tttStartWatch();
 }
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.21";
+const APP_VERSION = "1.22";
 const UPDATES = [
+  { v:"1.22", name:"Play from anywhere", date:"Oct 10", notes:[
+    "Two-phone Tic-Tac-Toe has a new <b>Outside / Anywhere</b> choice when you make a room.",
+    "<b>Anywhere</b> rooms use no GPS at all. You and your friend just tap the squares, so they can be far away.",
+    "Online games don't earn points, and no location is used or stored. Walking games work just like before."] },
   { v:"1.21", name:"Update Details", date:"Oct 10", notes:[
     "New <b>Update Details</b> button in the menu. It lists every update and what it added, newest first.",
     "A <b>NEW</b> tag shows on the menu item after an update, until you open it."] },
@@ -3534,12 +3556,13 @@ document.addEventListener("click", e=>{
   else if(act==="delete-hunt"){ huntDelete(); }
   else if(act==="open-ttt"){ menuOpen=false; tttOpen(); render(); window.scrollTo(0,0); }
   else if(act==="close-ttt"){ tttClose(); render(); window.scrollTo(0,0); }
-  else if(act==="ttt-mode"){ const m = el.dataset.mode==="two" ? "two" : "one"; if(m!==ttt.mode){ if(tttTwo()) tttLeaveRoom(); ttt.mode = m; ttt.practice = false; ttt.center = tttTwo() ? null : ttt.center; tttRoomMsg = ""; tttSave(); if(m==="one") tttNewGame(true); render(); } }
+  else if(act==="ttt-mode"){ const m = el.dataset.mode==="two" ? "two" : "one"; if(m!==ttt.mode){ if(tttTwo()) tttLeaveRoom(); ttt.mode = m; if(m==="two") tttStopWatch(); ttt.practice = false; ttt.center = tttTwo() ? null : ttt.center; tttRoomMsg = ""; tttSave(); if(m==="one"){ tttNewGame(true); if(inTtt) tttStartWatch(); } render(); } }
   else if(act==="ttt-create"){ tttCreateRoom(); }
   else if(act==="ttt-join"){ if(tttCode.length===5) tttJoinRoom(); }
   else if(act==="ttt-leave"){ tttLeaveRoom(); }
   else if(act==="ttt-rematch"){ tttRoomCall("ttt_rematch", { p_code:ttt.room.code }); }
   else if(act==="ttt-reset-center"){ if(!tttConfirmReset){ tttConfirmReset = true; render(); } else { tttConfirmReset = false; if(tttPos && tttPos.acc <= TTT_MAX_ACC){ ttt.center = [tttPos.lat, tttPos.lon]; tttSave(); toast("Center reset here"); } else toast("Wait for GPS locked first."); render(); } }
+  else if(act==="ttt-where"){ tttNewRemote = el.dataset.where==="anywhere"; render(); }
   else if(act==="ttt-size"){ ttt.size = TTT_SIZES[el.dataset.size] ? el.dataset.size : "m"; tttSave(); render(); }
   else if(act==="ttt-center"){ tttSetCenter(); }
   else if(act==="ttt-claim"){ tttClaim(); }
@@ -3719,9 +3742,11 @@ document.addEventListener("input", e=>{
 });
 // practice mode: tap a square on the board
 document.addEventListener("click", e=>{
-  const cv = e.target.closest && e.target.closest("canvas[data-ttt]"); if(!cv || !ttt.practice || ttt.over) return;
-  const r = cv.getBoundingClientRect(), u = r.width/5, cx = Math.floor((e.clientX - r.left)/u) - 1, cy = Math.floor((e.clientY - r.top)/u) - 1;
-  if(cx>=0 && cx<3 && cy>=0 && cy<3 && tttPlace(cy*3+cx)) render();
+  const cv = e.target.closest && e.target.closest("canvas[data-ttt]"); if(!cv || ttt.over) return;
+  const rem = tttRemote(); if(!ttt.practice && !rem) return;
+  const r = cv.getBoundingClientRect(), u = r.width/(rem ? 3.5 : 5), off = rem ? .25 : 1, cx = Math.floor((e.clientX - r.left)/u - off), cy = Math.floor((e.clientY - r.top)/u - off);
+  if(!(cx>=0 && cx<3 && cy>=0 && cy<3)) return;
+  if(rem) tttTapRemote(cy*3+cx); else if(tttPlace(cy*3+cx)) render();
 });
 setInterval(tttPoll, 2000);
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && inTtt && tttTwo()) tttPoll(); });
