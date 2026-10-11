@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Questopia Privacy</title>
+<meta name="description" content="What Questopia collects, why, who can see it, and how to get it deleted.">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --field:#F1F6EA; --paper:#FCFEF9; --moss:#2E5E3E; --moss-dark:#1E4029;
+  --ink:#1F2A22; --muted:#5D6B60; --line:#D9E3D0; --sky:#CFE8F5; --link:#1F5FA8;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --field:#121A14; --paper:#1A241D; --moss:#7CC35A; --moss-dark:#A9DD8C;
+         --ink:#E6EEE6; --muted:#A3B2A5; --line:#2B3A2F; --sky:#16301F; --link:#8EC1F2; }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--field);color:var(--ink);
+  font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.sky{height:200px;background:linear-gradient(var(--sky),var(--field));position:absolute;inset:0 0 auto 0;z-index:0}
+main{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:20px 16px 64px}
+a{color:var(--link)}
+a:focus-visible{outline:3px solid var(--moss);outline-offset:2px;border-radius:4px}
+.back{display:inline-block;margin:4px 0 14px;font-weight:600;color:var(--moss-dark);text-decoration:none}
+.back:hover{text-decoration:underline}
+.mark{margin:0;font-weight:800;color:var(--moss-dark);letter-spacing:.01em}
+h1{margin:2px 0 6px;font-size:32px;line-height:1.15;color:var(--moss-dark)}
+.updated{margin:0 0 22px;color:var(--muted);font-size:15px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:6px 20px 16px;margin:0 0 16px}
+h2{margin:18px 0 6px;font-size:21px;line-height:1.25;color:var(--moss-dark)}
+p{margin:8px 0}
+ul{margin:8px 0;padding-left:22px}
+li{margin:5px 0}
+.short{background:var(--paper);border:2px solid var(--moss);border-radius:18px;padding:12px 20px 14px;margin:0 0 16px}
+.short h2{margin-top:6px}
+table{border-collapse:collapse;width:100%;font-size:16px;margin:8px 0}
+th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:8px 8px 8px 0}
+th{color:var(--muted);font-weight:600;font-size:14px}
+@media (max-width:520px){ h1{font-size:28px} body{font-size:16px} }
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+<main>
+  <a class="back" href="./">‹ Back to Questopia</a>
+  <p class="mark">Questopia</p>
+  <h1>Privacy</h1>
+  <p class="updated">Last updated October 10, 2026</p>
+
+  <section class="short" aria-label="The short version">
+    <h2>The short version</h2>
+    <ul>
+      <li>Questopia is for people <b>13 and older</b>.</li>
+      <li>You can play without an account. Your progress then stays on your own device.</li>
+      <li>If you sign in with Google, we save your progress online so it follows you to other devices.</li>
+      <li>Friends you accept can see your name, avatar, title, unlocked items and points. <b>Nobody can see your email.</b></li>
+      <li>We don't sell your information or show ads. Your phone's location is used <b>only while you run an Activity</b>, and it stays on your device. We never see it. The optional Street and Satellite map views load map pictures from OpenStreetMap or Esri (see below).</li>
+      <li>You can ask us to delete everything at <a href="mailto:questopiagame@gmail.com">questopiagame@gmail.com</a>.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>What Questopia is</h2>
+    <p>Questopia is a game that gets you outside. You do quests, earn points, and spend them on looks for your avatar. Most quests work on the honor system. Walk and hike quests use your phone's GPS through an Activity, to check that you really went for a walk. Scavenger Hunts let you share photos with your friends (see below). Apart from that, the game never asks for your camera or your photos.</p>
+  </section>
+
+  <section class="card">
+    <h2>What we collect</h2>
+    <table>
+      <tr><th>What</th><th>Why</th></tr>
+      <tr><td><b>Your name and email from Google</b>, only if you sign in</td><td>To know which account is yours and to find your saved game. We use nothing else from your Google account.</td></tr>
+      <tr><td><b>Your username</b>, which you pick</td><td>It shows next to your avatar. Names go through a filter, and phone numbers are not allowed.</td></tr>
+      <tr><td><b>Your game</b>: points, quest progress, avatar, title, unlocked items</td><td>To run the game and to show your avatar and points to friends.</td></tr>
+      <tr><td><b>Your friend code, friends and friend requests</b></td><td>To connect you with the people you choose to add.</td></tr>
+            <tr><td><b>Photos and hints you post in Scavenger Hunts (only if you sign in and use them)</b></td><td>To let your friends play a photo hunt. The game shrinks each photo and re-saves it on your phone first, which removes hidden details like the place a photo was taken. Photos and hints are saved online with our database (Supabase). Only you and your <b>accepted friends</b> can see a hunt. A photo someone sends back to answer your hunt can only be seen by you and the person who sent it. You can delete a hunt, and its replies, whenever you like. Don't post people's faces, homes or private places. You can report any hunt or reply you see.</td></tr>
+            <tr><td><b>Room codes and moves for two-phone GPS Tic-Tac-Toe (only if you sign in and use it)</b></td><td>To let two phones play the same game. The room holds the 5-letter code, the two usernames, the board and the score. It does <b>not</b> hold any location: each phone sets the board's center from its own GPS and keeps it on that phone. A room is deleted when a player leaves it, and any room older than 4 hours is cleared out.</td></tr>
+<tr><td><b>Your phone's location, only while GPS Tic-Tac-Toe is open</b></td><td>To place you on a tic-tac-toe board you set up outside. The board's center point is saved only in your own browser on your device. It is <b>never sent to us</b>, never saved online and never shown to anyone. Tap "End and forget the board's location" to delete it.</td></tr>
+<tr><td><b>Your phone's location, only while an Activity is running</b></td><td>To measure your walk and draw your route. It is saved in your own browser on your device. It is <b>never sent to us</b>, never saved online and never shown to friends. You can delete any walk, or all of them, in My Walks.</td></tr>
+    </table>
+    <p>We don't collect your real name (unless you used it as your username or it's in your Google name), your address, your phone number, your contacts, or any payment information. We don't collect your location either: during an Activity it is used on your phone only (see below). Questopia has no purchases.</p>
+  </section>
+
+  <section class="card">
+    <h2>Who can see what</h2>
+    <ul>
+      <li><b>Friends you've accepted</b> can see your username, avatar, title, the items you've unlocked and how many points you have.</li>
+      <li><b>A person who adds your friend code</b> sends you a request. You see their username, avatar and title. They see your username after sending it. They don't see more unless you accept.</li>
+      <li><b>Scavenger Hunt photos</b> you post can be seen by your accepted friends. Photos you send back can be seen by the person whose hunt it is.</li>
+      <li><b>Nobody else</b> can see where you walked. Routes and walk history stay on your device only.</li>
+      <li><b>Map views (optional).</b> The route map starts in <b>Simple</b> view, which loads nothing from the internet. If you choose <b>Street</b> or <b>Satellite</b>, your phone downloads small map pictures from <a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy">OpenStreetMap</a> or <a href="https://www.esri.com/en-us/privacy/overview">Esri</a>. Those services can see which area of the map is on screen and your phone's IP address. They never get your route line, your account or your name. Your choice is remembered on your device.</li>
+      <li><b>No other player</b> can see your email address, and people who aren't your accepted friends can't see your points. Your friend code only lets people send you a request.</li>
+      <li>The person who runs Questopia can see the saved data in the database, such as emails and game progress, in order to run and fix the game. That information is not shared or sold.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Where it's kept, and who helps us run it</h2>
+    <ul>
+      <li><b>On your device:</b> the game saves your progress in your browser. Clearing your browser data removes it.</li>
+      <li><b>Online (only if you sign in):</b> <a href="https://supabase.com/privacy">Supabase</a> stores accounts and saved games.</li>
+      <li><b>Google</b> handles the sign-in. See <a href="https://policies.google.com/privacy">Google's privacy policy</a>.</li>
+      <li><b>Cloudflare</b> hosts this website and delivers the game's 3D code. Like any website host, it sees technical details such as your IP address when your browser loads the page. The game also loads its fonts from Google Fonts.</li>
+    </ul>
+    <p>These companies only handle information to provide those services. We don't send your data to anyone else, and we don't use your Google information for advertising.</p>
+  </section>
+
+  <section class="card">
+    <h2>How long we keep it</h2>
+    <p>We keep your saved game until you ask us to delete it. If you stop using Questopia, you can ask us to delete your account at any time.</p>
+  </section>
+
+  <section class="card">
+    <h2>Your choices</h2>
+    <ul>
+      <li><b>Play without an account.</b> Don't sign in and nothing is saved online.</li>
+      <li><b>Sign out.</b> Your progress stays on your device.</li>
+      <li><b>Remove a friend</b> or decline a request in the Friends screen.</li>
+      <li><b>Delete everything.</b> Email <a href="mailto:questopiagame@gmail.com">questopiagame@gmail.com</a> from the email you used to sign in, and we'll delete your account, saved game and friend connections. You can also remove Questopia's access in your Google account settings.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Age</h2>
+    <p>Questopia is for people <b>13 and older</b>. If you're under 13, please don't create an account. If you think someone under 13 has signed in, email us and we'll delete the account.</p>
+  </section>
+
+  <section class="card">
+    <h2>Changes and contact</h2>
+    <p>If we change how Questopia handles information, we'll update this page and the date at the top.</p>
+    <p>Questions, or want your data deleted? Email <a href="mailto:questopiagame@gmail.com">questopiagame@gmail.com</a>.</p>
+  </section>
+</main>
+</body>
+</html>
