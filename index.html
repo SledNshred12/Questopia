@@ -912,14 +912,37 @@ function buildHuman(look, gear){
     const hg = new THREE.Group(); hg.position.set(0,1.56,-.01); hg.rotation.x = -.45;
     const buzz = t==="buzz" || t==="mohawk";   // mohawk has shaved sides
     hg.add(new THREE.Mesh(
-      new THREE.SphereGeometry(buzz?.372:.385,28,16,0,Math.PI*2,0,Math.PI*(buzz?.44:(t==="short"?.56:.5))), hair));
+      new THREE.SphereGeometry(buzz?.372:.385,28,16,0,Math.PI*2,0,Math.PI*(buzz?.44:.5)), hair));
     if(t==="short"){
-      // a bit longer than before: a fuller cap that comes down over the ears and nape, with a soft swept fringe
-      hg.add(part(new THREE.SphereGeometry(.392,28,16,0,Math.PI*2,Math.PI*.46,Math.PI*.13), hair, 0,0,0));   // extra length around the lower edge
+      // messy, swept-forward hair: tousled clumps over a tidy cap, tapered sides with sideburns
+      const light = mat(new THREE.Color(look.hairColor).offsetHSL(0,0,.06).getStyle());
+      const up = new THREE.Vector3(0,1,0), q2 = new THREE.Quaternion();
+      const clump = (pol, az, sx, sy, sz, spin, lite, lift) => {
+        const n = new THREE.Vector3(Math.sin(pol)*Math.sin(az), Math.cos(pol), Math.sin(pol)*Math.cos(az)), r = .385 + (lift||0);
+        const o = part(new THREE.SphereGeometry(.1,14,10), lite ? light : hair, n.x*r, 1.55+n.y*r, n.z*r);
+        o.scale.set(sx,sy,sz); o.quaternion.setFromUnitVectors(up, n); q2.setFromAxisAngle(up, spin); o.quaternion.multiply(q2); g.add(o);
+      };
       if(!hatOn){
-        const f = part(new THREE.SphereGeometry(.15,18,12), hair, .06,1.725,.235);
-        f.scale.set(1.5,.5,.8); f.rotation.z = .18; f.rotation.x = -.25; g.add(f);
+        // top: layered tufts, swept toward the front-right
+        for(const [pol,az,sx,sy,sz,spin,lite,lift] of [
+          [.1,0,1.9,.7,1.1,-.5,0,.03], [.45,.5,2,.6,1,-.7,1,.02], [.45,-.5,1.9,.6,1,-.3,0,.02], [.5,1.6,1.8,.6,1,-1.2,0,.01],
+          [.5,-1.6,1.8,.6,1,.8,1,.01], [.5,2.7,1.8,.6,1,-.4,0,.01], [.5,-2.7,1.8,.6,1,.4,1,.01], [.55,3.14,1.8,.6,1,0,0,.01],
+          [.85,.7,2,.6,1,-.9,0,.02], [.85,-.2,2,.6,1,-.5,1,.02], [.85,-.95,1.8,.6,1,-.1,0,.02], [.85,1.7,1.9,.6,1,-1.2,1,.01],
+          [.85,-1.8,1.9,.6,1,.9,0,.01], [.85,2.8,1.9,.6,1,-.5,0,.01], [.85,-2.8,1.9,.6,1,.5,1,.01]
+        ]) clump(pol,az,sx,sy,sz,spin,lite,lift);
+        // fringe along the hairline, sweeping right and dipping at the temple
+        for(const [pol,az,sx,sy,sz,spin,lite,lift] of [
+          [1.08,-.85,1.7,.6,.9,.15,0,.015], [1.1,-.4,1.8,.6,.9,-.1,1,.02], [1.1,.1,1.9,.6,.9,-.35,0,.02],
+          [1.14,.6,1.9,.6,.9,-.6,1,.015], [1.25,1.05,1.7,.6,.9,-1,0,.01]
+        ]) clump(pol,az,sx,sy,sz,spin,lite,lift);
+        // a few stray tufts sticking up
+        for(const [az,pol,len] of [[.2,.12,.14],[1.4,.4,.11],[-1.2,.4,.12],[3,.45,.1]]){
+          const n = new THREE.Vector3(Math.sin(pol)*Math.sin(az), Math.cos(pol), Math.sin(pol)*Math.cos(az));
+          const c = part(new THREE.ConeGeometry(.035,len,6), hair, n.x*(.4+len*.3), 1.55+n.y*(.4+len*.3), n.z*(.4+len*.3));
+          c.quaternion.setFromUnitVectors(up, new THREE.Vector3(n.x+.25, n.y, n.z+.3).normalize()); g.add(c);
+        }
       }
+      for(const sd of [-1,1]){ const sb = part(new THREE.SphereGeometry(.05,10,8), hair, sd*.335,1.57,.1); sb.scale.set(.5,1.3,.9); g.add(sb); }
     }
     if(t==="curly"){
       for(const [pol, n] of [[.25,1],[.7,6],[1.1,9],[1.3,10]]){
@@ -3439,8 +3462,10 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.28";
+const APP_VERSION = "1.29";
 const UPDATES = [
+  { v:"1.29", name:"Messy short hair", date:"Oct 10", notes:[
+    "The <b>Short</b> hair is now a messy, swept-forward style with layered tufts on top, a fringe that dips at the temple, and short sideburns."] },
   { v:"1.28", name:"Cleaner short hair", date:"Oct 10", notes:[
     "The <b>Short</b> hair got a cleaner look: a fuller cap that covers the ears and back of the neck, and a softer fringe that no longer sits over the eyes."] },
   { v:"1.27", name:"Longer short hair", date:"Oct 10", notes:[
