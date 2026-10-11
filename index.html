@@ -37,6 +37,11 @@ body{
   position:absolute;inset:0 0 auto 0;height:260px;z-index:0;
   background:linear-gradient(var(--sky),var(--field));
 }
+.holi{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.holi span{position:absolute;opacity:.42;animation:holiFloat 10s ease-in-out infinite alternate;user-select:none;line-height:1}
+@keyframes holiFloat{from{transform:translateY(0) rotate(-8deg)}to{transform:translateY(-16px) rotate(8deg)}}
+@media (prefers-reduced-motion:reduce){.holi span{animation:none}}
+.holi-chip{display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:700;color:var(--muted)}
 .wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:20px 16px 56px}
 h1,h2,h3,.big-name{font-family:var(--display);margin:0;line-height:1.1;letter-spacing:-0.01em;font-variant-ligatures:none;font-feature-settings:"liga" 0,"clig" 0}
 button{font:inherit;color:inherit;cursor:pointer}
@@ -498,6 +503,7 @@ canvas{display:block}
 </head>
 <body>
 <div class="sky" aria-hidden="true"></div>
+<div class="holi" id="holi" aria-hidden="true"></div>
 <div class="wrap">
   <main id="app"></main>
 </div>
@@ -3484,8 +3490,11 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.31";
+const APP_VERSION = "1.32";
 const UPDATES = [
+  { v:"1.32", name:"Holiday themes", date:"Oct 11", notes:[
+    "The background now changes with the holiday of the month, like <b>Halloween</b> in October, <b>Thanksgiving</b> in November and <b>Winter Holidays</b> in December, with floating decorations.",
+    "Don't want it? Open the menu and tap <b>Holiday theme</b> to turn it off (or back on)."] },
   { v:"1.31", name:"Let Me Know shirt", date:"Oct 10", notes:[
     "New gift-only shirt: <b>Let Me Know</b>, with the meme printed across the whole shirt. Like ALPHA Wolf, a friend has to give it to you on the Gifts page."] },
   { v:"1.30", name:"New short hair", date:"Oct 10", notes:[
@@ -3637,6 +3646,10 @@ function mainView(){
     <span class="lb-txt"><b>GPS Tic-Tac-Toe</b><span>Walk a giant board, on one phone or two</span></span>
     <span class="chev" aria-hidden="true">›</span>
   </button>
+  <button class="locker-btn" data-act="holi-toggle" aria-pressed="${!holiOff}">
+    <span aria-hidden="true" style="font-size:22px;width:24px;text-align:center">${holidayNow().icon}</span>
+    <span class="lb-txt"><b>Holiday theme: ${holiOff ? "Off" : "On"}</b><span>${holiOff ? "Tap to decorate the game for " : "This month: "}${esc(holidayNow().name)}</span></span>
+  </button>
   <button class="locker-btn" data-act="open-updates">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/><path d="M18.5 15l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg>
     <span class="lb-txt"><b>Update Details</b><span>Every update and what it added</span></span>
@@ -3644,12 +3657,51 @@ function mainView(){
     <span class="chev" aria-hidden="true">›</span>
   </button>
   </nav>` : ""}
+  ${holiOff ? "" : `<div class="holi-chip">${holidayNow().icon} ${esc(holidayNow().name)} theme</div>`}
   <div class="tabs" role="tablist">
     ${["daily","weekly","season"].map(t=>`<button class="tab" role="tab" aria-selected="${tab===t}" data-act="tab" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}
   </div>
   <section class="panel" role="tabpanel">${panels[tab]()}</section>
   <p class="note">Tap Start, go do the quest, and Complete unlocks when the timer ends. One quest at a time. Walk and hike quests use GPS: tap Start Activity and keep your screen on. Spend your points in the Locker or the Shop. Find them, your Friends List and My Walks under the menu button (the three lines) at the top.</p>
   ${ONLINE ? `<p class="acct-line">${cloud.session ? `☁ Saved online · ` : ""}<button class="linkbtn" data-act="open-account">${cloud.session ? "Account" : "Save your progress online"}</button> · <a class="linkbtn" href="privacy.html">Privacy</a></p>` : ""}`;
+}
+
+/* ---------- Holiday themes: the background changes with the holiday of the month ----------
+   Only colors and a few floating decorations change. Players can turn it off in the menu (saved on this device). */
+const HOLIDAYS = [
+  { key:"newyear",  name:"New Year",          icon:"🎆", deco:["🎆","✨","🎉","🥳"], sky:"#D9DDF7", field:"#F3F2FB" },
+  { key:"valentine",name:"Valentine's Day",   icon:"💌", deco:["❤️","💌","💕","🌹"], sky:"#FAD3E0", field:"#FCF1F4" },
+  { key:"stpat",    name:"St. Patrick's Day", icon:"🍀", deco:["🍀","☘️","🌈","🪙"], sky:"#CDEFD4", field:"#EEF8EC" },
+  { key:"easter",   name:"Easter",            icon:"🐣", deco:["🐣","🥚","🌷","🐰"], sky:"#E6DDF7", field:"#F6F3FB" },
+  { key:"spring",   name:"Spring",            icon:"🌸", deco:["🌸","🌼","🦋","🌷"], sky:"#FBE3EC", field:"#F7F9EE" },
+  { key:"summer",   name:"Summer",            icon:"☀️", deco:["☀️","🌻","🍉","😎"], sky:"#FFE9B0", field:"#FBF7E6" },
+  { key:"july4",    name:"Fourth of July",    icon:"🎆", deco:["🎆","🎇","⭐","🌭"], sky:"#D6E4FA", field:"#F4F6FB" },
+  { key:"beach",    name:"Beach Days",        icon:"🏖️", deco:["🏖️","🌊","🍦","🐚"], sky:"#BFE9F2", field:"#F2F8F5" },
+  { key:"fall",     name:"Fall",              icon:"🍂", deco:["🍂","🍁","🍎","🌰"], sky:"#F6DFC2", field:"#FAF4EA" },
+  { key:"halloween",name:"Halloween",         icon:"🎃", deco:["🎃","🦇","👻","🕸️"], sky:"#F9D2AE", field:"#F8EFE6" },
+  { key:"thanks",   name:"Thanksgiving",      icon:"🦃", deco:["🦃","🍂","🥧","🌽"], sky:"#F3D9B8", field:"#F8F1E7" },
+  { key:"winter",   name:"Winter Holidays",   icon:"❄️", deco:["❄️","⛄","🎄","🎁"], sky:"#D4E6F7", field:"#F1F6FA" }
+];
+const HOLI_KEY = "questopia-holiday-off";
+let holiOff = false; try{ holiOff = localStorage.getItem(HOLI_KEY) === "1"; }catch(e){}
+function holidayNow(){
+  const force = new URLSearchParams(location.search).get("holiday");   // ?holiday=halloween previews a theme
+  return HOLIDAYS.find(h=>h.key===force) || HOLIDAYS[new Date().getMonth()];
+}
+function applyHoliday(){
+  const root = document.documentElement, layer = document.getElementById("holi");
+  if(holiOff){ root.style.removeProperty("--sky"); root.style.removeProperty("--field"); delete root.dataset.holiday; if(layer) layer.innerHTML = ""; return; }
+  const h = holidayNow();
+  root.style.setProperty("--sky", h.sky); root.style.setProperty("--field", h.field); root.dataset.holiday = h.key;
+  if(layer){
+    // a fixed scatter (same every time) along the edges, so it never sits behind the text
+    const spots = [[-2,14],[93,16],[1,30],[94,33],[-1,47],[93,51],[2,64],[94,68],[-2,81],[93,85],[66,0],[-1,96],[92,97]];
+    layer.innerHTML = spots.map(([x,y],i)=>`<span style="left:${x}%;top:${y}%;font-size:${24 + (i*7)%18}px;animation-delay:-${(i*1.7)%9}s;animation-duration:${8 + (i*3)%7}s">${h.deco[i % h.deco.length]}</span>`).join("");
+  }
+}
+function setHolidayOff(off){
+  holiOff = !!off; try{ off ? localStorage.setItem(HOLI_KEY,"1") : localStorage.removeItem(HOLI_KEY); }catch(e){}
+  applyHoliday();
 }
 
 /* ---------- Gifts: gift-only cosmetics (like ALPHA Wolf) ----------
@@ -3820,6 +3872,7 @@ document.addEventListener("click", e=>{
     confirmDiscard = false; render(); window.scrollTo(0,0);
   }
   else if(act==="start-free-walk"){ startFreeWalk(); }
+  else if(act==="holi-toggle"){ setHolidayOff(!holiOff); render(); }
   else if(act==="open-gifts"){ menuOpen=false; inGifts=true; giftNote=null; render(); window.scrollTo(0,0); giftCheckMaker(); }
   else if(act==="close-gifts"){ inGifts=false; render(); window.scrollTo(0,0); }
   else if(act==="pick-gift"){ const f = document.getElementById("giftFile"); if(f) f.click(); }
@@ -4057,6 +4110,7 @@ setInterval(()=>{ if(!document.hidden && cloud.session && !cloud.conflict && (in
  // new friend requests show up on their own
 refreshEvent();
 finishChallenges();
+applyHoliday();
 render();
 if(HAS3D && !REDUCED) requestAnimationFrame(loop);
 </script>
