@@ -37,11 +37,98 @@ body{
   position:absolute;inset:0 0 auto 0;height:260px;z-index:0;
   background:linear-gradient(var(--sky),var(--field));
 }
-.holi{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.holi span{position:absolute;opacity:.42;animation:holiFloat 10s ease-in-out infinite alternate;user-select:none;line-height:1}
-@keyframes holiFloat{from{transform:translateY(0) rotate(-8deg)}to{transform:translateY(-16px) rotate(8deg)}}
-@media (prefers-reduced-motion:reduce){.holi span{animation:none}}
+/* Holiday scenes */
+.holi,.holi-top{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.holi{z-index:0}
+.holi-top{z-index:6}
+.holi svg{display:block;width:100%;height:auto;overflow:visible}
+.holi-top svg{display:block;width:100%;height:auto;overflow:visible}
+html[data-holiday]{--paper:rgba(252,254,249,.6)}
+html[data-holiday] .panel,html[data-holiday] .tabs,html[data-holiday] .group,html[data-holiday] .menu-panel,html[data-holiday] .holi-chip{-webkit-backdrop-filter:blur(.6px);backdrop-filter:blur(.6px)}
 .holi-chip{display:inline-flex;align-items:center;gap:6px;margin-top:12px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:14px;font-weight:700;color:var(--muted)}
+.h-corner{position:absolute}
+/* falling / rising things */
+.h-fall,.h-rise{position:absolute;top:0;animation:hFall linear infinite}
+.h-rise{animation-name:hRise}
+@keyframes hFall{from{transform:translateY(-12vh)}to{transform:translateY(110vh)}}
+@keyframes hRise{from{transform:translateY(110vh)}to{transform:translateY(-12vh)}}
+.h-sway{animation:hSway ease-in-out infinite alternate}
+@keyframes hSway{from{transform:translateX(-18px) rotate(-25deg)}to{transform:translateX(18px) rotate(25deg)}}
+/* things that fly across */
+.h-fly,.h-flutter,.h-drift{position:absolute;left:0;animation:hAcross linear infinite}
+@keyframes hAcross{from{transform:translateX(-30vw)}to{transform:translateX(115vw)}}
+.h-drift{animation-name:hAcross}
+.h-bob2{animation:hBob 1.6s ease-in-out infinite alternate}
+@keyframes hBob{from{transform:translateY(-8px)}to{transform:translateY(8px)}}
+.h-wing-l,.h-wing-r{transform-box:fill-box;animation:hFlap .32s ease-in-out infinite alternate}
+.h-wing-l{transform-origin:right center}.h-wing-r{transform-origin:left center}
+@keyframes hFlap{from{transform:scaleY(1)}to{transform:scaleY(.35)}}
+.h-flutter .h-wing-l,.h-flutter .h-wing-r{animation-name:hFlapX;animation-duration:.22s}
+@keyframes hFlapX{from{transform:scaleX(1)}to{transform:scaleX(.25)}}
+.h-flutter{animation-name:hFlutter}
+@keyframes hFlutter{0%{transform:translate(-20vw,0)}25%{transform:translate(20vw,-6vh)}50%{transform:translate(50vw,4vh)}75%{transform:translate(80vw,-5vh)}100%{transform:translate(115vw,2vh)}}
+.h-gull{transform-box:fill-box;transform-origin:center;animation:hFlap .45s ease-in-out infinite alternate}
+.h-spin{transform-box:fill-box;transform-origin:center;animation:hSpin 24s linear infinite}
+@keyframes hSpin{to{transform:rotate(360deg)}}
+/* Halloween */
+.h-web{position:absolute;top:0;right:0;width:170px}
+.h-thread{position:absolute;top:0;right:58px;width:2px;height:0}
+.h-swing{position:absolute;left:0;top:0;transform-origin:1px 0;animation:hSwing 2.8s ease-in-out infinite alternate}
+@keyframes hSwing{from{transform:rotate(-22deg)}to{transform:rotate(22deg)}}
+.h-line{position:absolute;left:0;top:0;width:1.6px;height:150px;background:rgba(58,52,64,.75)}
+.h-spider{position:absolute;left:-22px;top:142px;width:46px;animation:hSpiderBounce 3.6s ease-in-out infinite}
+@keyframes hSpiderBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(16px)}}
+.h-glow{animation:hGlow 1.4s ease-in-out infinite alternate}
+@keyframes hGlow{from{opacity:.7}to{opacity:1}}
+/* Christmas */
+.h-sleigh{position:absolute;top:0;left:0;width:300px;animation:hSleigh 14s linear infinite}
+@keyframes hSleigh{0%{transform:translate(-340px,62vh) rotate(-12deg)}70%{transform:translate(110vw,0vh) rotate(-12deg)}100%{transform:translate(110vw,0vh) rotate(-12deg)}}
+.h-deer{animation:hBob .5s ease-in-out infinite alternate}
+/* St. Patrick's */
+.h-lep{position:absolute;bottom:3vh;left:50%;width:120px;margin-left:-80px}
+.h-jump{animation:hJump 1.3s cubic-bezier(.3,0,.7,1) infinite;transform-origin:center bottom}
+@keyframes hJump{0%{transform:translateY(0) scale(1.08,.9)}12%{transform:translateY(0) scale(.94,1.08)}50%{transform:translateY(-120px) scale(1,1) rotate(6deg)}88%{transform:translateY(0) scale(.96,1.04)}100%{transform:translateY(0) scale(1.08,.9)}}
+.h-arm-l,.h-arm-r{transform-box:fill-box;animation:hWave .65s ease-in-out infinite alternate}
+.h-arm-l{transform-origin:right bottom}.h-arm-r{transform-origin:left bottom}
+@keyframes hWave{from{transform:rotate(-12deg)}to{transform:rotate(12deg)}}
+.h-pot{left:calc(50% + 40px);bottom:2vh;width:90px}
+/* Fourth of July */
+.h-pole{position:absolute;left:50%;bottom:0;width:7px;height:66vh;margin-left:-3px;background:linear-gradient(90deg,#8A8F98,#E6E9EE,#8A8F98);border-radius:3px}
+.h-ball{position:absolute;left:50%;bottom:66vh;width:15px;height:15px;margin-left:-7px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFF1A8,#C9A227)}
+.h-flag{position:absolute;left:calc(50% + 3px);bottom:calc(66vh - 104px);display:flex;width:190px;height:100px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.18))}
+.h-slice{width:10px;height:100px;overflow:hidden;flex:none;animation:hWaveFlag 1.6s ease-in-out infinite alternate}
+.h-slice svg{display:block;width:190px;height:100px}
+@keyframes hWaveFlag{from{transform:translateY(calc(var(--i) * -.5px)) scaleY(1)}to{transform:translateY(calc(var(--i) * .55px)) scaleY(calc(1 - var(--i) * .004))}}
+.h-fw{position:absolute;width:0;height:0;animation:hFwCycle 4s ease-out infinite}
+.h-fw i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;transform:rotate(var(--a)) translateY(0);opacity:0;animation:inherit;animation-name:hSpark;box-shadow:0 0 8px currentColor}
+.h-fw b{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;opacity:0;animation:inherit;animation-name:hFlash}
+@keyframes hFwCycle{from{opacity:1}to{opacity:1}}
+@keyframes hSpark{0%{opacity:0;transform:rotate(var(--a)) translateY(0) scale(1)}6%{opacity:1}55%{opacity:1;transform:rotate(var(--a)) translateY(calc(var(--r) * -1)) scale(.9)}75%,100%{opacity:0;transform:rotate(var(--a)) translateY(calc(var(--r) * -1.15)) scale(.4)}}
+@keyframes hFlash{0%{opacity:0;transform:scale(1)}5%{opacity:1;transform:scale(3)}20%,100%{opacity:0;transform:scale(1)}}
+/* Easter */
+.h-hopper{position:absolute;bottom:1vh;left:0;animation:hAcross 14s linear infinite}
+.h-hop{animation:hHop .7s cubic-bezier(.3,0,.7,1) infinite}
+@keyframes hHop{0%,100%{transform:translateY(0) scale(1.05,.95)}50%{transform:translateY(-46px) rotate(-6deg)}}
+/* Spring */
+.h-flower{position:absolute;bottom:-6px;transform-origin:center bottom;animation:hFlowerSway 2.4s ease-in-out infinite alternate}
+@keyframes hFlowerSway{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
+/* Beach */
+.h-waves{position:absolute;left:0;width:200vw;display:flex;animation:hWaves 9s linear infinite}
+.h-waves svg{width:100vw;height:40px}
+.h-waves2{animation-duration:6s;animation-direction:reverse}
+@keyframes hWaves{from{transform:translateX(0)}to{transform:translateX(-100vw)}}
+.h-sail{position:absolute;bottom:4vh;left:0;animation:hAcross 30s linear infinite}
+.h-rock{animation:hRock 2.4s ease-in-out infinite alternate;transform-origin:center bottom}
+@keyframes hRock{from{transform:rotate(-6deg) translateY(2px)}to{transform:rotate(6deg) translateY(-3px)}}
+/* Thanksgiving */
+.h-walker{position:absolute;bottom:0;left:0;animation:hAcross 22s linear infinite}
+.h-waddle{animation:hWaddle .6s ease-in-out infinite alternate;transform-origin:center bottom}
+@keyframes hWaddle{from{transform:rotate(-4deg)}to{transform:rotate(4deg) translateY(-3px)}}
+.h-bob,.h-tail{transform-box:fill-box;transform-origin:center bottom;animation:hPeck 1.2s ease-in-out infinite}
+.h-tail{animation:hTail 1.8s ease-in-out infinite alternate}
+@keyframes hPeck{0%,60%,100%{transform:translate(0,0)}75%{transform:translate(4px,6px) rotate(14deg)}}
+@keyframes hTail{from{transform:scale(.96)}to{transform:scale(1.04)}}
+@media (prefers-reduced-motion:reduce){.holi *,.holi-top *{animation:none!important}}
 .wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:20px 16px 56px}
 h1,h2,h3,.big-name{font-family:var(--display);margin:0;line-height:1.1;letter-spacing:-0.01em;font-variant-ligatures:none;font-feature-settings:"liga" 0,"clig" 0}
 button{font:inherit;color:inherit;cursor:pointer}
@@ -504,6 +591,7 @@ canvas{display:block}
 <body>
 <div class="sky" aria-hidden="true"></div>
 <div class="holi" id="holi" aria-hidden="true"></div>
+<div class="holi-top" id="holiTop" aria-hidden="true"></div>
 <div class="wrap">
   <main id="app"></main>
 </div>
@@ -3490,8 +3578,13 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.32";
+const APP_VERSION = "1.33";
 const UPDATES = [
+  { v:"1.33", name:"Animated holidays", date:"Oct 11", notes:[
+    "Every month now has its own <b>animated holiday scene</b> in the background.",
+    "Halloween: a spider swinging from a cobweb in the corner, bats and glowing pumpkins. Christmas: Santa's sleigh flies across the sky while it snows.",
+    "St. Patrick's Day: a happy leprechaun jumping by his pot of gold while gold coins fall. Fourth of July: the flag waving on a pole, with fireworks from the 4th on.",
+    "Plus confetti and fireworks for New Year, hearts for Valentine's, a hopping bunny for Easter, butterflies, sunshine, waves and a sailboat, falling leaves and a strutting turkey."] },
   { v:"1.32", name:"Holiday themes", date:"Oct 11", notes:[
     "The background now changes with the holiday of the month, like <b>Halloween</b> in October, <b>Thanksgiving</b> in November and <b>Winter Holidays</b> in December, with floating decorations.",
     "Don't want it? Open the menu and tap <b>Holiday theme</b> to turn it off (or back on)."] },
@@ -3666,38 +3759,221 @@ function mainView(){
   ${ONLINE ? `<p class="acct-line">${cloud.session ? `☁ Saved online · ` : ""}<button class="linkbtn" data-act="open-account">${cloud.session ? "Account" : "Save your progress online"}</button> · <a class="linkbtn" href="privacy.html">Privacy</a></p>` : ""}`;
 }
 
-/* ---------- Holiday themes: the background changes with the holiday of the month ----------
-   Only colors and a few floating decorations change. Players can turn it off in the menu (saved on this device). */
+/* ---------- Holiday themes: an animated scene for the holiday of the month ----------
+   The scene sits behind the game (cards are a little see-through while a theme is on). Only Halloween's
+   cobweb sits on top, in the corner, and it never blocks taps. Players can turn themes off in the menu. */
 const HOLIDAYS = [
-  { key:"newyear",  name:"New Year",          icon:"🎆", deco:["🎆","✨","🎉","🥳"], sky:"#D9DDF7", field:"#F3F2FB" },
-  { key:"valentine",name:"Valentine's Day",   icon:"💌", deco:["❤️","💌","💕","🌹"], sky:"#FAD3E0", field:"#FCF1F4" },
-  { key:"stpat",    name:"St. Patrick's Day", icon:"🍀", deco:["🍀","☘️","🌈","🪙"], sky:"#CDEFD4", field:"#EEF8EC" },
-  { key:"easter",   name:"Easter",            icon:"🐣", deco:["🐣","🥚","🌷","🐰"], sky:"#E6DDF7", field:"#F6F3FB" },
-  { key:"spring",   name:"Spring",            icon:"🌸", deco:["🌸","🌼","🦋","🌷"], sky:"#FBE3EC", field:"#F7F9EE" },
-  { key:"summer",   name:"Summer",            icon:"☀️", deco:["☀️","🌻","🍉","😎"], sky:"#FFE9B0", field:"#FBF7E6" },
-  { key:"july4",    name:"Fourth of July",    icon:"🎆", deco:["🎆","🎇","⭐","🌭"], sky:"#D6E4FA", field:"#F4F6FB" },
-  { key:"beach",    name:"Beach Days",        icon:"🏖️", deco:["🏖️","🌊","🍦","🐚"], sky:"#BFE9F2", field:"#F2F8F5" },
-  { key:"fall",     name:"Fall",              icon:"🍂", deco:["🍂","🍁","🍎","🌰"], sky:"#F6DFC2", field:"#FAF4EA" },
-  { key:"halloween",name:"Halloween",         icon:"🎃", deco:["🎃","🦇","👻","🕸️"], sky:"#F9D2AE", field:"#F8EFE6" },
-  { key:"thanks",   name:"Thanksgiving",      icon:"🦃", deco:["🦃","🍂","🥧","🌽"], sky:"#F3D9B8", field:"#F8F1E7" },
-  { key:"winter",   name:"Winter Holidays",   icon:"❄️", deco:["❄️","⛄","🎄","🎁"], sky:"#D4E6F7", field:"#F1F6FA" }
+  { key:"newyear",  name:"New Year",          icon:"🎆", sky:"#C9CCF2", field:"#F1F0FA" },
+  { key:"valentine",name:"Valentine's Day",   icon:"💌", sky:"#FAD3E0", field:"#FCF1F4" },
+  { key:"stpat",    name:"St. Patrick's Day", icon:"🍀", sky:"#CDEFD4", field:"#EEF8EC" },
+  { key:"easter",   name:"Easter",            icon:"🐣", sky:"#E6DDF7", field:"#F6F3FB" },
+  { key:"spring",   name:"Spring",            icon:"🌸", sky:"#FBE3EC", field:"#F7F9EE" },
+  { key:"summer",   name:"Summer",            icon:"☀️", sky:"#FFE9B0", field:"#FBF7E6" },
+  { key:"july4",    name:"Fourth of July",    icon:"🎆", sky:"#C9DAF5", field:"#F4F6FB" },
+  { key:"beach",    name:"Beach Days",        icon:"🏖️", sky:"#BFE9F2", field:"#F2F8F5" },
+  { key:"fall",     name:"Fall",              icon:"🍂", sky:"#F6DFC2", field:"#FAF4EA" },
+  { key:"halloween",name:"Halloween",         icon:"🎃", sky:"#F4C79F", field:"#F6ECE2" },
+  { key:"thanks",   name:"Thanksgiving",      icon:"🦃", sky:"#F3D9B8", field:"#F8F1E7" },
+  { key:"winter",   name:"Christmas",         icon:"🎄", sky:"#CFE2F5", field:"#F1F6FA" }
 ];
 const HOLI_KEY = "questopia-holiday-off";
 let holiOff = false; try{ holiOff = localStorage.getItem(HOLI_KEY) === "1"; }catch(e){}
-function holidayNow(){
-  const force = new URLSearchParams(location.search).get("holiday");   // ?holiday=halloween previews a theme
-  return HOLIDAYS.find(h=>h.key===force) || HOLIDAYS[new Date().getMonth()];
+const holiForce = () => new URLSearchParams(location.search).get("holiday");   // ?holiday=halloween previews a theme
+function holidayNow(){ return HOLIDAYS.find(h=>h.key===holiForce()) || HOLIDAYS[new Date().getMonth()]; }
+
+/* little helpers */
+const hRand = (seed => () => (seed = (seed*16807) % 2147483647) / 2147483647)(7);
+const hSvg = (vb, body, cls, style) => `<svg class="${cls||""}" style="${style||""}" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${body}</svg>`;
+// things that fall from the top (or rise from the bottom) across the whole screen
+function hRain(n, makeSvg, opt){
+  opt = opt || {};
+  let out = "";
+  for(let i=0;i<n;i++){
+    const x = (i + .5) * 100/n + (hRand()-.5)*6, dur = (opt.dur||9) + hRand()*(opt.spread||5), del = -hRand()*dur, size = (opt.size||22) * (.7 + hRand()*.6);
+    out += `<div class="h-${opt.rise?"rise":"fall"}" style="left:${x.toFixed(1)}vw;animation-duration:${dur.toFixed(1)}s;animation-delay:${del.toFixed(1)}s">
+      <div class="h-sway" style="animation-duration:${(2.4+hRand()*2).toFixed(1)}s;animation-delay:-${(hRand()*3).toFixed(1)}s;width:${size.toFixed(0)}px">${makeSvg(i)}</div></div>`;
+  }
+  return out;
+}
+// a firework: sparks fly out from a point and fade, then it goes again
+function hFirework(x, y, color, delay, size){
+  let sparks = "";
+  for(let i=0;i<14;i++) sparks += `<i style="--a:${i*360/14}deg;background:${i%3 ? color : "#FFF6C8"}"></i>`;
+  return `<div class="h-fw" style="left:${x}vw;top:${y}vh;--r:${size||70}px;animation-delay:${delay}s">${sparks}<b style="background:${color}"></b></div>`;
+}
+function hFireworks(list){ return list.map(f=>hFirework(...f)).join(""); }
+
+/* art */
+const ART = {
+  web: hSvg("0 0 170 170", (()=>{
+    const cx = 170, cy = 0, angs = [92,106,120,134,148,162,176], rings = [32,62,92,124,158];
+    let s = angs.map(a=>{ const r = a*Math.PI/180; return `<line x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(r)*175).toFixed(1)}" y2="${(cy+Math.sin(r)*175).toFixed(1)}"/>`; }).join("");
+    for(const R of rings){
+      let d = "";
+      angs.forEach((a,i)=>{
+        const r = a*Math.PI/180, x = cx+Math.cos(r)*R, y = cy+Math.sin(r)*R;
+        if(i===0) d += `M${x.toFixed(1)} ${y.toFixed(1)}`;
+        else { const m = (a-7)*Math.PI/180, sag = R*.86; d += ` Q${(cx+Math.cos(m)*sag).toFixed(1)} ${(cy+Math.sin(m)*sag).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}`; }
+      });
+      s += `<path d="${d}" fill="none"/>`;
+    }
+    return `<g stroke="#3A3440" stroke-opacity=".6" stroke-width="1.3" stroke-linecap="round">${s}</g>`;
+  })()),
+  spider: hSvg("0 0 60 50", `
+    <g stroke="#241C2B" stroke-width="3" stroke-linecap="round" fill="none">
+      <path d="M22 26 Q10 16 4 24"/><path d="M22 29 Q8 26 3 36"/><path d="M23 32 Q12 36 8 46"/><path d="M25 34 Q19 42 18 49"/>
+      <path d="M38 26 Q50 16 56 24"/><path d="M38 29 Q52 26 57 36"/><path d="M37 32 Q48 36 52 46"/><path d="M35 34 Q41 42 42 49"/>
+    </g>
+    <ellipse cx="30" cy="22" rx="11" ry="10" fill="#2E2436"/><circle cx="30" cy="33" r="9" fill="#3A2E44"/>
+    <circle cx="26.5" cy="31" r="3.2" fill="#fff"/><circle cx="33.5" cy="31" r="3.2" fill="#fff"/>
+    <circle cx="27" cy="31.6" r="1.6" fill="#111"/><circle cx="33" cy="31.6" r="1.6" fill="#111"/>
+    <path d="M27 36 Q30 38.5 33 36" stroke="#F6C1D3" stroke-width="1.4" fill="none" stroke-linecap="round"/>`),
+  bat: hSvg("0 0 80 40", `<g fill="#2B2233"><g class="h-wing-l"><path d="M38 18 Q26 2 6 6 Q14 12 10 20 Q18 16 22 24 Q28 18 38 22Z"/></g>
+    <g class="h-wing-r"><path d="M42 18 Q54 2 74 6 Q66 12 70 20 Q62 16 58 24 Q52 18 42 22Z"/></g>
+    <ellipse cx="40" cy="21" rx="6" ry="8"/><path d="M35 14 L36 8 L39 13Z M45 14 L44 8 L41 13Z"/></g>
+    <circle cx="38" cy="19" r="1.4" fill="#FFD84D"/><circle cx="42" cy="19" r="1.4" fill="#FFD84D"/>`),
+  pumpkin: hSvg("0 0 100 90", `<rect x="46" y="4" width="8" height="16" rx="3" fill="#4E7A2E"/>
+    <ellipse cx="30" cy="54" rx="24" ry="30" fill="#E8741E"/><ellipse cx="70" cy="54" rx="24" ry="30" fill="#E8741E"/><ellipse cx="50" cy="54" rx="24" ry="33" fill="#F28C28"/>
+    <g class="h-glow" fill="#FFD84D"><path d="M30 44 L40 36 L42 50Z"/><path d="M70 44 L60 36 L58 50Z"/><path d="M28 62 Q50 80 72 62 L64 64 L60 70 L54 64 L46 64 L40 70 L36 64Z"/></g>`),
+  sleigh: hSvg("0 0 360 110", `
+    <path d="M18 92 Q8 92 10 84 M10 96 L150 96 Q166 96 168 84" stroke="#C9A227" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M24 88 L28 52 Q30 40 44 42 L120 46 Q136 48 140 62 L150 88Z" fill="#C62828"/><path d="M28 54 L140 62" stroke="#F2C12E" stroke-width="4"/>
+    <ellipse cx="48" cy="44" rx="20" ry="16" fill="#7A4E2A"/><path d="M40 30 Q48 26 56 30" stroke="#2E7D32" stroke-width="4" fill="none"/>
+    <circle cx="96" cy="44" r="18" fill="#D32F2F"/><rect x="80" y="50" width="32" height="6" fill="#222"/><rect x="92" y="49" width="8" height="8" fill="#F2C12E"/>
+    <circle cx="100" cy="22" r="10" fill="#F5C9A0"/><path d="M90 24 Q100 44 110 24 Q100 30 90 24Z" fill="#fff"/>
+    <circle cx="97" cy="20" r="1.4" fill="#222"/><circle cx="104" cy="20" r="1.4" fill="#222"/><circle cx="101" cy="24" r="2" fill="#E57373"/>
+    <path d="M88 16 Q96 -2 114 6 L112 16Z" fill="#D32F2F"/><circle cx="116" cy="6" r="4.5" fill="#fff"/><rect x="87" y="14" width="26" height="5" rx="2.5" fill="#fff"/>
+    <path d="M108 40 Q160 30 330 38" stroke="#8D6E63" stroke-width="2" fill="none"/>
+    ${[176,240,304].map((x,i)=>`<g class="h-deer" style="animation-delay:-${i*.18}s">
+      <ellipse cx="${x}" cy="58" rx="22" ry="10" fill="#8D5A33"/><path d="M${x+16} 54 L${x+24} 38" stroke="#8D5A33" stroke-width="7" stroke-linecap="round"/>
+      <ellipse cx="${x+28}" cy="34" rx="8" ry="6" fill="#8D5A33"/>
+      <path d="M${x+24} 28 L${x+20} 16 M${x+21} 21 L${x+15} 18 M${x+28} 28 L${x+30} 15 M${x+29.5} 20 L${x+35} 16" stroke="#5D3A1A" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="${x+30}" cy="32" r="1.3" fill="#222"/><circle cx="${x+36}" cy="35" r="${i===2?3.4:2.2}" fill="${i===2?"#FF3B3B":"#3E2A1A"}"/>
+      <path d="M${x-14} 64 L${x-22} 76 M${x-8} 66 L${x-6} 80 M${x+10} 66 L${x+18} 78 M${x+16} 64 L${x+26} 72" stroke="#6B4423" stroke-width="3.4" stroke-linecap="round"/>
+      <path d="M${x-22} 56 Q${x-28} 52 ${x-26} 48" stroke="#8D5A33" stroke-width="3" fill="none"/></g>`).join("")}`),
+  snow: () => hSvg("0 0 20 20", `<g stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M10 1v18M2.2 5.5l15.6 9M2.2 14.5l15.6-9"/></g>`),
+  flake: () => hSvg("0 0 10 10", `<circle cx="5" cy="5" r="4" fill="#fff"/>`),
+  leprechaun: hSvg("0 0 90 130", `
+    <ellipse cx="45" cy="34" rx="30" ry="6" fill="#1E7A3A"/><rect x="27" y="2" width="36" height="32" rx="3" fill="#249447"/>
+    <rect x="27" y="24" width="36" height="7" fill="#1B1B1B"/><rect x="39" y="22.5" width="12" height="10" rx="1.5" fill="none" stroke="#F2C12E" stroke-width="2.5"/>
+    <circle cx="45" cy="50" r="15" fill="#F7C9A3"/>
+    <path d="M30 52 Q30 76 45 78 Q60 76 60 52 Q56 62 45 62 Q34 62 30 52Z" fill="#E8741E"/>
+    <path d="M37 48 Q40 45 43 48 M47 48 Q50 45 53 48" stroke="#3B2415" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <circle cx="35" cy="54" r="3" fill="#F49A9A" opacity=".7"/><circle cx="55" cy="54" r="3" fill="#F49A9A" opacity=".7"/>
+    <path d="M39 58 Q45 66 51 58Z" fill="#7A2B2B"/>
+    <g class="h-arm-l"><path d="M28 84 L12 66" stroke="#249447" stroke-width="8" stroke-linecap="round"/><circle cx="11" cy="64" r="5" fill="#F7C9A3"/></g>
+    <g class="h-arm-r"><path d="M62 84 L78 66" stroke="#249447" stroke-width="8" stroke-linecap="round"/><circle cx="79" cy="64" r="5" fill="#F7C9A3"/></g>
+    <rect x="27" y="76" width="36" height="30" rx="10" fill="#249447"/><rect x="27" y="92" width="36" height="6" fill="#1B1B1B"/><rect x="41" y="91" width="8" height="8" fill="none" stroke="#F2C12E" stroke-width="2"/>
+    <path d="M36 106 L33 120 M54 106 L57 120" stroke="#1E7A3A" stroke-width="8" stroke-linecap="round"/>
+    <ellipse cx="30" cy="124" rx="9" ry="5" fill="#1B1B1B"/><ellipse cx="60" cy="124" rx="9" ry="5" fill="#1B1B1B"/>
+    <rect x="27" y="120" width="6" height="4" fill="#F2C12E"/><rect x="57" y="120" width="6" height="4" fill="#F2C12E"/>`),
+  pot: hSvg("0 0 100 80", `<ellipse cx="50" cy="26" rx="34" ry="12" fill="#F2C12E"/>
+    ${[[32,20],[44,14],[58,16],[68,22],[50,22],[38,26]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="7" fill="#FFD84D" stroke="#C9A227" stroke-width="1.5"/>`).join("")}
+    <path d="M14 30 Q12 72 50 74 Q88 72 86 30Z" fill="#1F1F24"/><rect x="10" y="26" width="80" height="8" rx="4" fill="#2C2C33"/>`),
+  coin: () => hSvg("0 0 24 24", `<circle cx="12" cy="12" r="11" fill="#F2C12E" stroke="#B8892B" stroke-width="2"/><circle cx="12" cy="12" r="6.5" fill="none" stroke="#FFE680" stroke-width="1.6"/><path d="M8 7 Q10 5 13 5" stroke="#FFF6C8" stroke-width="2" fill="none" stroke-linecap="round"/>`),
+  rainbow: hSvg("0 0 200 100", ["#FF5A5A","#FF9F40","#FFD84D","#5ACB6E","#4DA6FF","#9A6BFF"].map((c,i)=>`<path d="M${10+i*8} 100 A${90-i*8} ${90-i*8} 0 0 1 ${190-i*8} 100" stroke="${c}" stroke-width="8" fill="none"/>`).join("")),
+  flag: (()=>{   // 19 x 10 proportion: 13 stripes and a blue corner with stars
+    let s = "";
+    for(let i=0;i<13;i++) s += `<rect y="${(i*100/13).toFixed(2)}" width="190" height="${(100/13+.3).toFixed(2)}" fill="${i%2 ? "#fff" : "#C8102E"}"/>`;
+    s += `<rect width="76" height="53.85" fill="#0A3161"/>`;
+    for(let r=0;r<9;r++) for(let c=0;c<(r%2?5:6);c++) s += `<circle cx="${(r%2?12.6:6.3)+c*12.6}" cy="${5.4+r*5.4}" r="1.9" fill="#fff"/>`;
+    return s;
+  })(),
+  heart: c => hSvg("0 0 24 22", `<path d="M12 21 C-4 10 2 -2 12 5 C22 -2 28 10 12 21Z" fill="${c}"/>`),
+  wingHeart: hSvg("0 0 120 60", `<g class="h-wing-l"><path d="M44 26 Q22 4 4 14 Q18 18 12 28 Q26 26 30 36 Q36 28 46 32Z" fill="#fff" stroke="#F2A7C3" stroke-width="2"/></g>
+    <g class="h-wing-r"><path d="M76 26 Q98 4 116 14 Q102 18 108 28 Q94 26 90 36 Q84 28 74 32Z" fill="#fff" stroke="#F2A7C3" stroke-width="2"/></g>
+    <path d="M60 56 C36 40 42 14 60 26 C78 14 84 40 60 56Z" fill="#E8446B"/><path d="M50 26 Q54 22 58 24" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>`),
+  bunny: hSvg("0 0 100 90", `<ellipse cx="34" cy="24" rx="7" ry="22" fill="#fff" stroke="#E6DDF0" stroke-width="2" transform="rotate(-16 34 24)"/><ellipse cx="34" cy="24" rx="3" ry="15" fill="#F7B6CB" transform="rotate(-16 34 24)"/>
+    <ellipse cx="48" cy="22" rx="7" ry="22" fill="#fff" stroke="#E6DDF0" stroke-width="2" transform="rotate(10 48 22)"/><ellipse cx="48" cy="22" rx="3" ry="15" fill="#F7B6CB" transform="rotate(10 48 22)"/>
+    <ellipse cx="56" cy="64" rx="30" ry="20" fill="#fff" stroke="#E6DDF0" stroke-width="2"/><circle cx="26" cy="64" r="9" fill="#fff" stroke="#E6DDF0" stroke-width="2"/>
+    <circle cx="44" cy="46" r="16" fill="#fff" stroke="#E6DDF0" stroke-width="2"/><circle cx="50" cy="43" r="2.6" fill="#222"/><circle cx="58" cy="49" r="2.4" fill="#F28AAE"/>
+    <ellipse cx="74" cy="82" rx="10" ry="5" fill="#fff" stroke="#E6DDF0" stroke-width="2"/>`),
+  egg: (c1,c2) => hSvg("0 0 40 50", `<ellipse cx="20" cy="27" rx="16" ry="21" fill="${c1}"/><path d="M5 24 Q12 18 20 24 Q28 30 35 24" stroke="${c2}" stroke-width="4" fill="none"/><path d="M5 34 L35 34" stroke="#fff" stroke-width="3" stroke-dasharray="4 4"/>`),
+  butterfly: (c1,c2) => hSvg("0 0 60 50", `<g class="h-wing-l"><ellipse cx="18" cy="18" rx="16" ry="14" fill="${c1}"/><ellipse cx="20" cy="38" rx="11" ry="10" fill="${c2}"/><circle cx="16" cy="17" r="4" fill="#fff" opacity=".6"/></g>
+    <g class="h-wing-r"><ellipse cx="42" cy="18" rx="16" ry="14" fill="${c1}"/><ellipse cx="40" cy="38" rx="11" ry="10" fill="${c2}"/><circle cx="44" cy="17" r="4" fill="#fff" opacity=".6"/></g>
+    <rect x="28" y="10" width="4" height="34" rx="2" fill="#3B2A1A"/><path d="M29 11 Q24 2 20 3 M31 11 Q36 2 40 3" stroke="#3B2A1A" stroke-width="1.6" fill="none"/>`),
+  flower: (c) => hSvg("0 0 40 90", `<path d="M20 90 Q18 60 20 34" stroke="#4FA36A" stroke-width="4" fill="none"/><ellipse cx="12" cy="66" rx="8" ry="4" fill="#5DBB72" transform="rotate(-30 12 66)"/>
+    ${[0,72,144,216,288].map(a=>`<ellipse cx="20" cy="18" rx="7" ry="12" fill="${c}" transform="rotate(${a} 20 28) translate(0 -2)"/>`).join("")}<circle cx="20" cy="28" r="6" fill="#FFD84D"/>`),
+  sun: hSvg("0 0 120 120", `<g class="h-spin">${Array.from({length:12},(_,i)=>`<rect x="57" y="2" width="6" height="22" rx="3" fill="#FFB938" transform="rotate(${i*30} 60 60)"/>`).join("")}</g>
+    <circle cx="60" cy="60" r="30" fill="#FFD23F"/><circle cx="51" cy="56" r="3" fill="#6B4A00"/><circle cx="69" cy="56" r="3" fill="#6B4A00"/><path d="M50 67 Q60 76 70 67" stroke="#6B4A00" stroke-width="3" fill="none" stroke-linecap="round"/>`),
+  gull: hSvg("0 0 40 16", `<path class="h-gull" d="M2 10 Q11 0 20 10 Q29 0 38 10" stroke="#3E4A55" stroke-width="3" fill="none" stroke-linecap="round"/>`),
+  cloud: hSvg("0 0 120 60", `<g fill="#fff"><circle cx="34" cy="36" r="20"/><circle cx="60" cy="26" r="24"/><circle cx="86" cy="36" r="18"/><rect x="30" y="34" width="62" height="22" rx="11"/></g>`),
+  boat: hSvg("0 0 80 80", `<path d="M38 6 L38 58 L10 58Z" fill="#fff" stroke="#9FB3C8" stroke-width="1.5"/><path d="M42 14 L42 58 L66 58Z" fill="#FF6B6B"/><path d="M6 60 L74 60 L64 74 L16 74Z" fill="#8D5A33"/>`),
+  waves: c => hSvg("0 0 400 40", `<path d="M0 20 Q25 0 50 20 T100 20 T150 20 T200 20 T250 20 T300 20 T350 20 T400 20 V40 H0Z" fill="${c}"/>`),
+  leaf: c => hSvg("0 0 24 24", `<path d="M12 2 C20 6 22 14 12 22 C2 14 4 6 12 2Z" fill="${c}"/><path d="M12 4 L12 22" stroke="rgba(0,0,0,.25)" stroke-width="1.4"/>`),
+  maple: c => hSvg("0 0 24 24", `<path d="M12 1 L14 7 L19 5 L17 10 L23 11 L18 14 L20 19 L13 16 L12 23 L11 16 L4 19 L6 14 L1 11 L7 10 L5 5 L10 7Z" fill="${c}"/>`),
+  turkey: hSvg("0 0 120 110", `<g class="h-tail">${["#B5451B","#E8741E","#F2C12E","#8D5A33","#B5451B","#E8741E","#F2C12E"].map((c,i)=>`<ellipse cx="60" cy="30" rx="11" ry="30" fill="${c}" transform="rotate(${-66+i*22} 60 60)"/>`).join("")}</g>
+    <ellipse cx="60" cy="66" rx="26" ry="24" fill="#6B4423"/><g class="h-bob"><circle cx="60" cy="40" r="12" fill="#8D5A33"/><circle cx="56" cy="37" r="2" fill="#111"/><circle cx="64" cy="37" r="2" fill="#111"/>
+    <path d="M57 42 L60 48 L63 42Z" fill="#F2C12E"/><path d="M60 46 Q55 54 58 58" stroke="#D32F2F" stroke-width="4" fill="none" stroke-linecap="round"/></g>
+    <path d="M52 88 L50 104 M68 88 L70 104" stroke="#F2A13E" stroke-width="4" stroke-linecap="round"/><path d="M44 104 L56 104 M64 104 L76 104" stroke="#F2A13E" stroke-width="3" stroke-linecap="round"/>`),
+  confetti: i => { const c = ["#FF5A5A","#FFD84D","#4DA6FF","#5ACB6E","#C77DFF","#FF9F40"][i%6]; return hSvg("0 0 10 16", `<rect width="10" height="16" rx="2" fill="${c}"/>`); }
+};
+
+/* each month's scene: [behind the game, on top of the game (corner only)] */
+function holiScene(key){
+  const fwOn = holiForce()==="july4" || (new Date().getMonth()===6 && new Date().getDate()>=4);   // fireworks start on the 4th
+  switch(key){
+    case "halloween": return [
+      `<div class="h-fly" style="top:16vh;animation-duration:13s"><div class="h-bob2" style="width:70px">${ART.bat}</div></div>
+       <div class="h-fly" style="top:34vh;animation-duration:17s;animation-delay:-8s"><div class="h-bob2" style="width:54px">${ART.bat}</div></div>
+       <div class="h-corner" style="left:-6px;bottom:-4px;width:110px">${ART.pumpkin}</div>
+       <div class="h-corner" style="right:-4px;bottom:-6px;width:80px">${ART.pumpkin}</div>`,
+      `<div class="h-web">${ART.web}</div>
+       <div class="h-thread"><div class="h-swing"><span class="h-line"></span><div class="h-spider">${ART.spider}</div></div></div>`];
+    case "winter": return [
+      hRain(26, i => i%3 ? ART.flake() : ART.snow(), { size:12, dur:10, spread:8 }) +
+      `<div class="h-sleigh"><div class="h-bob2">${ART.sleigh}</div></div>`, ""];
+    case "stpat": return [
+      `<div class="h-corner" style="left:-20px;top:4vh;width:260px;opacity:.55">${ART.rainbow}</div>` +
+      hRain(14, () => ART.coin(), { size:24, dur:6, spread:4 }) +
+      `<div class="h-lep"><div class="h-jump">${ART.leprechaun}</div></div><div class="h-corner h-pot">${ART.pot}</div>`, ""];
+    case "july4": return [
+      (fwOn ? hFireworks([[18,14,"#FF4D4D",0,80],[78,10,"#4DA6FF",1.1,70],[50,6,"#FFFFFF",2.1,90],[30,30,"#4DA6FF",2.9,60],[72,28,"#FF4D4D",.6,75],[88,40,"#FFD84D",1.8,55],[10,42,"#FFFFFF",3.4,60]]) : "") +
+      `<div class="h-pole"></div><div class="h-ball"></div>
+       <div class="h-flag">${Array.from({length:19},(_,i)=>`<div class="h-slice" style="--i:${i};animation-delay:${(-i*.11).toFixed(2)}s"><svg viewBox="0 0 190 100" style="margin-left:${-i*10}px" preserveAspectRatio="none" aria-hidden="true">${ART.flag}</svg></div>`).join("")}</div>`, ""];
+    case "newyear": return [
+      hFireworks([[20,12,"#FFD84D",0,80],[76,16,"#C77DFF",1.3,70],[48,8,"#4DA6FF",2.2,90],[86,36,"#FF5A5A",.7,60],[12,34,"#5ACB6E",1.9,60]]) +
+      hRain(22, ART.confetti, { size:9, dur:7, spread:5 }), ""];
+    case "valentine": return [
+      hRain(16, i => ART.heart(["#E8446B","#FF8FAB","#C9184A","#FFB3C6"][i%4]), { size:22, dur:11, spread:6, rise:true }) +
+      `<div class="h-fly" style="top:22vh;animation-duration:15s"><div class="h-bob2" style="width:110px">${ART.wingHeart}</div></div>`, ""];
+    case "easter": return [
+      `<div class="h-hopper"><div class="h-hop" style="width:96px">${ART.bunny}</div></div>
+       <div class="h-corner" style="left:4vw;bottom:0;width:34px">${ART.egg("#9AD0F5","#FF8FAB")}</div>
+       <div class="h-corner" style="left:14vw;bottom:0;width:30px">${ART.egg("#FFD84D","#5ACB6E")}</div>
+       <div class="h-corner" style="right:6vw;bottom:0;width:36px">${ART.egg("#C77DFF","#FFD84D")}</div>
+       <div class="h-corner" style="right:18vw;bottom:0;width:28px">${ART.egg("#FF8FAB","#4DA6FF")}</div>`, ""];
+    case "spring": return [
+      [0,1,2,3].map(i=>`<div class="h-flutter" style="top:${10+i*20}vh;animation-duration:${14+i*3}s;animation-delay:-${i*4}s"><div class="h-bob2" style="width:46px">${ART.butterfly(["#FF8FAB","#9AD0F5","#FFD84D","#C77DFF"][i],["#FFB3C6","#4DA6FF","#FF9F40","#E0AAFF"][i])}</div></div>`).join("") +
+      Array.from({length:9},(_,i)=>`<div class="h-flower" style="left:${i*11.5}vw;animation-delay:-${i*.4}s;width:${30+(i%3)*6}px">${ART.flower(["#FF8FAB","#FFFFFF","#C77DFF","#FFD84D"][i%4])}</div>`).join(""), ""];
+    case "summer": return [
+      `<div class="h-corner" style="right:-20px;top:-20px;width:150px">${ART.sun}</div>
+       <div class="h-drift" style="top:8vh;animation-duration:60s"><div style="width:120px;opacity:.9">${ART.cloud}</div></div>
+       <div class="h-drift" style="top:26vh;animation-duration:80s;animation-delay:-40s"><div style="width:90px;opacity:.8">${ART.cloud}</div></div>
+       <div class="h-fly" style="top:18vh;animation-duration:16s"><div class="h-bob2" style="width:40px">${ART.gull}</div></div>
+       <div class="h-fly" style="top:21vh;animation-duration:16s;animation-delay:-.8s"><div class="h-bob2" style="width:30px">${ART.gull}</div></div>`, ""];
+    case "beach": return [
+      `<div class="h-corner" style="right:-16px;top:-16px;width:120px">${ART.sun}</div>
+       <div class="h-sail"><div class="h-rock" style="width:80px">${ART.boat}</div></div>
+       <div class="h-waves" style="bottom:3vh;opacity:.7">${ART.waves("#7FD1E3")}${ART.waves("#7FD1E3")}</div>
+       <div class="h-waves h-waves2" style="bottom:0">${ART.waves("#3FA7C9")}${ART.waves("#3FA7C9")}</div>`, ""];
+    case "fall": return [
+      hRain(18, i => (i%2 ? ART.leaf : ART.maple)(["#E8741E","#C0392B","#F2C12E","#B5451B","#D4A017"][i%5]), { size:24, dur:10, spread:6 }), ""];
+    case "thanks": return [
+      hRain(12, i => ART.maple(["#E8741E","#C0392B","#F2C12E","#B5451B"][i%4]), { size:22, dur:11, spread:6 }) +
+      `<div class="h-walker"><div class="h-waddle" style="width:110px">${ART.turkey}</div></div>`, ""];
+  }
+  return ["",""];
 }
 function applyHoliday(){
-  const root = document.documentElement, layer = document.getElementById("holi");
-  if(holiOff){ root.style.removeProperty("--sky"); root.style.removeProperty("--field"); delete root.dataset.holiday; if(layer) layer.innerHTML = ""; return; }
-  const h = holidayNow();
-  root.style.setProperty("--sky", h.sky); root.style.setProperty("--field", h.field); root.dataset.holiday = h.key;
-  if(layer){
-    // a fixed scatter (same every time) along the edges, so it never sits behind the text
-    const spots = [[-2,14],[93,16],[1,30],[94,33],[-1,47],[93,51],[2,64],[94,68],[-2,81],[93,85],[66,0],[-1,96],[92,97]];
-    layer.innerHTML = spots.map(([x,y],i)=>`<span style="left:${x}%;top:${y}%;font-size:${24 + (i*7)%18}px;animation-delay:-${(i*1.7)%9}s;animation-duration:${8 + (i*3)%7}s">${h.deco[i % h.deco.length]}</span>`).join("");
+  const root = document.documentElement, back = document.getElementById("holi"), front = document.getElementById("holiTop");
+  if(holiOff){
+    root.style.removeProperty("--sky"); root.style.removeProperty("--field"); delete root.dataset.holiday;
+    if(back) back.innerHTML = ""; if(front) front.innerHTML = ""; return;
   }
+  const h = holidayNow(), sc = holiScene(h.key);
+  root.style.setProperty("--sky", h.sky); root.style.setProperty("--field", h.field); root.dataset.holiday = h.key;
+  if(back) back.innerHTML = sc[0]; if(front) front.innerHTML = sc[1];
 }
 function setHolidayOff(off){
   holiOff = !!off; try{ off ? localStorage.setItem(HOLI_KEY,"1") : localStorage.removeItem(HOLI_KEY); }catch(e){}
