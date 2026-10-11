@@ -1521,7 +1521,18 @@ async function pushCloud(){
 }
 function queueCloudSave(){ clearTimeout(cloud.timer); cloud.timer = setTimeout(pushCloud, 4000); }
 // Replace this device's save with the online one
+const BACKUP_KEY = "questopia-backup";
+function backupSave(st, why){ try{ if(st && (st.earnedTotal||st.points||(st.owned||[]).length)) localStorage.setItem(BACKUP_KEY, JSON.stringify({ when:Date.now(), why, state:st })); }catch(e){} }
+function backupGet(){ try{ return JSON.parse(localStorage.getItem(BACKUP_KEY)||"null"); }catch(e){ return null; } }
+async function backupRestore(){
+  const b = backupGet(); if(!b || !b.state) return;
+  const st = Object.assign({}, b.state, { dirty:true, syncedAt:null });
+  if(cloud.session){ try{ const row = await getCloudRow(); st.syncedAt = row ? row.updated_at : null; }catch(e){} }
+  try{ localStorage.setItem(KEY, JSON.stringify(st)); localStorage.removeItem(BACKUP_KEY); }catch(e){}
+  location.reload();
+}
 function adoptCloud(row){
+  if(!cloud.conflictKeep) backupSave(state, "online");
   const cs = Object.assign({}, row.state, { dirty:false, syncedAt:row.updated_at });
   try{ localStorage.setItem(KEY, JSON.stringify(cs)); }catch(e){}
   location.reload();
@@ -1630,17 +1641,23 @@ async function socialAct(fn, args){
   }catch(e){ toast("Couldn't reach the server. Try again."); return false; }
 }
 let inAccount = false;
+function backupHtml(){
+  const b = backupGet(); if(!b || !b.state) return "";
+  return `<div class="group"><h3>Backup save</h3><p>${esc(b.state.username||"Player")} · ${b.state.points||0} points<br><span class="fine">Saved ${new Date(b.when).toLocaleString()} when a different save was picked.</span></p><button class="btn wide" data-act="restore-backup">Bring this save back</button></div>`;
+}
 function accountView(){
   const back = `<div class="locker-top"><button class="backlink" data-act="close-account">‹ Quests</button><h2>Account</h2></div>`;
   if(!ONLINE) return `<section class="account">${back}<p class="demo-note">Online accounts aren't set up yet.</p></section>`;
   if(cloud.conflict){
-    const cs = cloud.conflict.row.state;
+    const cs = cloud.conflict.row.state, ce = cs.earnedTotal||cs.points||0, le = state.earnedTotal||state.points||0;
+    const recCloud = ce > le, recLocal = le > ce, ask = cloud.askConfirm;
+    const rec = `<span class="chip-gps good" style="margin-left:6px">Has more points</span>`;
     return `<section class="account">${back}
-      <p class="demo-note">Your online save and this device are different. Which one do you want to keep?</p>
-      <div class="group"><h3>Online save</h3><p>${esc(cs.username||"Player")} · ${cs.points||0} points</p>
-        <button class="btn solid" data-act="use-cloud">Use online save</button></div>
-      <div class="group"><h3>This device</h3><p>${esc(state.username||"Player")} · ${state.points} points</p>
-        <button class="btn" data-act="use-local">Use this device</button></div></section>`;
+      <p class="demo-note">Your online save and this device are different. Which one do you want to keep? The one you don't pick is saved as a backup you can bring back.</p>
+      <div class="group"><h3>Online save${recCloud ? rec : ""}</h3><p>${esc(cs.username||"Player")} · ${cs.points||0} points</p>
+        <button class="btn ${recCloud?"solid":""}" data-act="use-cloud">${ask==="cloud" ? "Tap again to use online" : "Use online save"}</button></div>
+      <div class="group"><h3>This device${recLocal ? rec : ""}</h3><p>${esc(state.username||"Player")} · ${state.points} points</p>
+        <button class="btn ${recLocal?"solid":""}" data-act="use-local">${ask==="local" ? "Tap again to use this device" : "Use this device"}</button></div></section>`;
   }
   const ses = cloud.session;
   if(!ses) return `<section class="account">${back}
@@ -1650,14 +1667,14 @@ function accountView(){
       ${PROVIDERS.apple ? `<button class="btn wide" data-act="sign-in" data-provider="apple">Continue with Apple</button>` : ""}
       ${cloud.status ? `<p class="err">${esc(cloud.status)}</p>` : ""}
       <p class="fine">Questopia is for ages 13 and up. We keep your game progress and the name and email your sign-in shares. Friends you accept can see your name, avatar, title, unlocked items and points, never your email. <a href="privacy.html">Read the privacy page</a>.</p>
-    </div></section>`;
+    </div>${backupHtml()}</section>`;
   return `<section class="account">${back}
     <div class="group"><h3>Signed in</h3>
       <p>${esc(ses.user.name || ses.user.email || "Player")}${ses.user.email && ses.user.name!==ses.user.email ? `<br><span class="fine">${esc(ses.user.email)}</span>` : ""}</p>
       <p class="stat">${esc(cloud.status || (state.dirty ? "Saving soon..." : "Saved online"))}</p>
       <button class="btn solid wide" data-act="save-now">Save now</button>
       <button class="btn wide" data-act="sign-out">Sign out</button>
-    </div>
+    </div>${backupHtml()}
     <p class="note">Signing out keeps your progress on this device.</p></section>`;
 }
 function ensureFresh(){
@@ -3724,7 +3741,8 @@ const APP_VERSION = "1.36";
 const UPDATES = [
   { v:"1.36", name:"Sign in later", date:"Oct 11", notes:[
     "After you pick a username you can sign in with Google or tap \"I'll do this later\".",
-    "It only asks once, and it never asks again when you open the website."] },
+    "It only asks once, and it never asks again when you open the website.",
+    "Points safety: when your online save and this device differ, the one with more points is marked, you must tap twice before points get replaced, and the save you did not pick is kept as a backup you can bring back from the Account page."] },
   {v:"1.36",name:"Sign in later",date:"Oct 11, 2026",notes:["After you pick a username, you can sign in with Google or tap \"I'll do this later\".","It only asks once. It never asks again when you open the website."]},
   { v:"1.35", name:"Spider fix", date:"Oct 11", notes:[
     "The Halloween spider now stays on its thread, and the cobweb, spider and pumpkins sit behind the game so they never cover text."] },
@@ -4362,8 +4380,15 @@ document.addEventListener("click", e=>{
   else if(act==="sign-in"){ signInWith(el.dataset.provider); }
   else if(act==="sign-out"){ signOut(); render(); }
   else if(act==="save-now"){ cloud.status = "Saving..."; render(); pushCloud(); }
-  else if(act==="use-cloud"){ adoptCloud(cloud.conflict.row); }
-  else if(act==="use-local"){ cloud.conflict = null; state.syncedAt = null; pushCloud().then(()=>render()); }
+  else if(act==="use-cloud"){
+    const cs = cloud.conflict.row.state, loses = state.points > (cs.points||0);
+    if(loses && cloud.askConfirm!=="cloud"){ cloud.askConfirm="cloud"; render(); return; }
+    adoptCloud(cloud.conflict.row); }
+  else if(act==="use-local"){
+    const cs = cloud.conflict.row.state, loses = (cs.points||0) > state.points;
+    if(loses && cloud.askConfirm!=="local"){ cloud.askConfirm="local"; render(); return; }
+    backupSave(cloud.conflict.row.state, "online"); cloud.askConfirm=null; cloud.conflict = null; state.syncedAt = null; pushCloud().then(()=>render()); }
+  else if(act==="restore-backup"){ backupRestore(); }
   else if(act==="close-admin"){ inAdmin=false; render(); window.scrollTo(0,0); }
   else if(act==="admin-out"){ adminSession=null; saveAdminSession(); render(); }
   else if(act==="ev-start" || act==="ev-stop"){
