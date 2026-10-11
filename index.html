@@ -823,9 +823,10 @@ function buildHuman(look, gear){
     for(const s of [-1,1]) g.add(part(new THREE.BoxGeometry(.1,.1,.03), pk, s*.14,.78,rAt(.78)+.03));
   }
   if(gear.shirt==="wolf" && WOLF_TEX){
-    const rr = rAt(.93)+.006, wid = .34, hgt = wid*WOLF_ASPECT;
+    // the print covers the whole body of the shirt, wrapping most of the way around
     const pm = new THREE.MeshStandardMaterial({ map:WOLF_TEX, transparent:true, roughness:.9, metalness:0, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2 });
-    g.add(part(new THREE.CylinderGeometry(rr+.0015, rr-.0015, hgt, 24, 1, true, -wid/rr/2, wid/rr), pm, 0,.93,0));
+    const ang = 2.7, hh = .6;
+    g.add(part(new THREE.CylinderGeometry(rAt(.9+hh/2)+.004, rAt(.9-hh/2)+.004, hh, 32, 1, true, -ang/2, ang), pm, 0,.9,0));
   }
   if(gear.shirt==="cape"){
     const cp = new THREE.MeshStandardMaterial({ color:"#C0392B", roughness:.7, side:THREE.DoubleSide });
@@ -3373,7 +3374,7 @@ function tttClose(){ inTtt = false; tttStopWatch(); }
 const APP_VERSION = "1.23";
 const UPDATES = [
   { v:"1.23", name:"Wolf tee", date:"Oct 10", notes:[
-    "New <b>Wolf tee</b> in the Shop: a shirt with a howling wolf picture printed on the front. It keeps your shirt color around it."] },
+    "New <b>Wolf tee</b> in the Shop: a shirt with a wolf picture that fills the whole front. Your shirt color shows around the edges and on the sleeves."] },
   { v:"1.22", name:"Play from anywhere", date:"Oct 10", notes:[
     "Two-phone Tic-Tac-Toe has a new <b>Outside / Anywhere</b> choice when you make a room.",
     "<b>Anywhere</b> rooms use no GPS at all. You and your friend just tap the squares, so they can be far away.",
