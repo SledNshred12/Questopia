@@ -73,13 +73,14 @@ html[data-holiday] .panel,html[data-holiday] .tabs,html[data-holiday] .group,htm
 .h-spin{transform-box:fill-box;transform-origin:center;animation:hSpin 24s linear infinite}
 @keyframes hSpin{to{transform:rotate(360deg)}}
 /* Halloween */
-.h-web{position:absolute;top:0;right:0;width:170px}
-.h-thread{position:absolute;top:0;right:58px;width:2px;height:0}
+.h-web{position:absolute;top:0;right:0;width:125px}
+.h-thread{position:absolute;top:0;right:78px;width:2px;height:0}
 .h-swing{position:absolute;left:0;top:0;transform-origin:1px 0;animation:hSwing 2.8s ease-in-out infinite alternate}
-@keyframes hSwing{from{transform:rotate(-22deg)}to{transform:rotate(22deg)}}
-.h-line{position:absolute;left:0;top:0;width:1.6px;height:150px;background:rgba(58,52,64,.75)}
-.h-spider{position:absolute;left:-22px;top:142px;width:46px;animation:hSpiderBounce 3.6s ease-in-out infinite}
-@keyframes hSpiderBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(16px)}}
+@keyframes hSwing{from{transform:rotate(-16deg)}to{transform:rotate(16deg)}}
+.h-line{position:absolute;left:0;top:0;width:1.6px;height:196px;background:rgba(58,52,64,.8);animation:hLineBounce 3.6s ease-in-out infinite}
+@keyframes hLineBounce{0%,100%{height:196px}50%{height:210px}}
+.h-spider{position:absolute;left:-22px;top:187px;width:46px;animation:hSpiderBounce 3.6s ease-in-out infinite}
+@keyframes hSpiderBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(14px)}}
 .h-glow{animation:hGlow 1.4s ease-in-out infinite alternate}
 @keyframes hGlow{from{opacity:.7}to{opacity:1}}
 /* Christmas */
@@ -3704,8 +3705,10 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.34";
+const APP_VERSION = "1.35";
 const UPDATES = [
+  { v:"1.35", name:"Spider fix", date:"Oct 11", notes:[
+    "The Halloween spider now stays on its thread, and the cobweb, spider and pumpkins sit behind the game so they never cover text."] },
   { v:"1.34", name:"Real sunsets", date:"Oct 11", notes:[
     "Sunset quests only open during the <b>sunset hour</b> (45 minutes before sunset until 20 minutes after). The game shows today's sunset time.",
     "There's only one sunset a day, so only <b>one sunset quest counts per day</b>.",
@@ -4046,10 +4049,11 @@ function holiScene(key){
     case "halloween": return [
       `<div class="h-fly" style="top:16vh;animation-duration:13s"><div class="h-bob2" style="width:70px">${ART.bat}</div></div>
        <div class="h-fly" style="top:34vh;animation-duration:17s;animation-delay:-8s"><div class="h-bob2" style="width:54px">${ART.bat}</div></div>
-       <div class="h-corner" style="left:-6px;bottom:-4px;width:110px">${ART.pumpkin}</div>
-       <div class="h-corner" style="right:-4px;bottom:-6px;width:80px">${ART.pumpkin}</div>`,
-      `<div class="h-web">${ART.web}</div>
-       <div class="h-thread"><div class="h-swing"><span class="h-line"></span><div class="h-spider">${ART.spider}</div></div></div>`];
+       <div class="h-corner" style="left:-14px;bottom:-22px;width:84px">${ART.pumpkin}</div>
+       <div class="h-corner" style="right:-12px;bottom:-24px;width:64px">${ART.pumpkin}</div>
+       <div class="h-web">${ART.web}</div>
+       <div class="h-thread"><div class="h-swing"><span class="h-line"></span><div class="h-spider">${ART.spider}</div></div></div>`,
+      ""];   // everything sits behind the game, so nothing covers text or buttons
     case "winter": return [
       hRain(26, i => i%3 ? ART.flake() : ART.snow(), { size:12, dur:10, spread:8 }) +
       `<div class="h-sleigh"><div class="h-bob2">${ART.sleigh}</div></div>`, ""];
