@@ -350,14 +350,18 @@ canvas{display:block}
 .seg+.map-credit+.route-map,.seg+.route-map{margin-top:8px}
 
 .hunt-intro{margin:6px 0 0;color:var(--muted);font-size:15px}
+.glow-green{color:#39FF14;font-weight:800;text-shadow:0 0 3px #39FF14,0 0 9px #39FF14,0 0 20px #00E85A;background:#0B1F10;border-radius:8px;padding:0 8px}
 .dropspot{margin-top:14px;border:3px dashed var(--moss);border-radius:22px;padding:26px 16px;text-align:center;background:var(--paper);cursor:pointer;transition:background .15s,transform .15s}
 .dropspot b{display:block;font-family:var(--display);font-size:22px;color:var(--moss-dark)}
 .dropspot span{display:block;color:var(--muted);font-size:14px;margin-top:4px}
 .dropspot.over{background:#DDF0CF;transform:scale(1.02)}
 .gift-card{display:flex;align-items:center;gap:14px;margin-top:12px;background:linear-gradient(135deg,#FFF3CC,#FFE0A0);border:2px solid #E0A82E;border-radius:20px;padding:10px 14px;cursor:grab}
+.gift-title{display:flex;align-items:center;justify-content:center;width:72px;height:72px;flex:none;font-size:13px;text-align:center;letter-spacing:0!important}
+.gift-got .gift-title{width:auto;height:auto;margin:6px 0;font-size:18px}
 .gift-card img{width:72px;height:72px;border-radius:14px;object-fit:cover;flex:none;background:#111}
 .gift-card b{display:block;font-family:var(--display);font-size:20px;color:#5A3D00}
-.gift-card span{display:block;font-size:14px;font-weight:700;letter-spacing:.08em;color:#6B4A00;word-break:break-all}
+.gift-card small{display:block;font-size:12px;color:#6B4A00;margin-top:2px}
+.gift-card div>span{display:block;font-size:14px;font-weight:700;letter-spacing:.08em;color:#6B4A00;word-break:break-all}
 .gift-got{margin-top:14px;text-align:center;background:#DDF0CF;border:2px solid var(--moss);border-radius:20px;padding:14px}
 .gift-got img{width:96px;height:96px;border-radius:16px;object-fit:cover;background:#111}
 .gift-got b{display:block;font-family:var(--display);font-size:22px;color:var(--moss-dark);margin:6px 0}
@@ -533,7 +537,7 @@ const CATALOG = {
   titles:[ ["since","Touching Grass since",0], ["rookie","Rookie Explorer",0], ["sprout","Sprout",50],
            ["fresh","Fresh Air Fan",75], ["trail","Trail Walker",100], ["sun","Sun Chaser",150],
            ["leaf","Leaf Spotter",150], ["dodger","Screen Dodger",250], ["grass","Grass Toucher",400],
-           ["fall2026","Fall 2026 Finisher",-1],
+           ["fall2026","Fall 2026 Finisher",-1], ["beta","Beta Tester",-1,"gift"],
            ["trailblazer","Trailblazer",300,"shop"], ["legend","Outdoor Legend",650,"shop"] ], // -1 means it can't be bought, only earned in the season
   glasses:[ ["none","No glasses",0], ["round","Round specs",60], ["square","Square frames",60],
             ["shades","Sunglasses",120], ["neon","Neon shades",200],
@@ -572,7 +576,9 @@ const itemName = (catKey, id) => catKey==="titles" ? titleName(id) : (findItem(c
 // Season champion titles show a gold badge next to the name.
 const BADGE_TITLES = new Set(["fall2026","legend"]);
 const BADGE_SVG = `<svg class="badge" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#F5B82E" stroke="#B9801A" stroke-width="2"/><path d="M12 6.5l1.7 3.6 3.9.5-2.9 2.7.8 3.9L12 15.3 8.5 17.2l.8-3.9-2.9-2.7 3.9-.5z" fill="#fff"/></svg>`;
-const titleHtml = id => (BADGE_TITLES.has(id) ? BADGE_SVG : "") + esc(titleName(id));
+const GLOW_TITLES = { beta:"glow-green" };   // titles that glow
+const glowWrap = (id, html) => GLOW_TITLES[id] ? `<span class="${GLOW_TITLES[id]}">${html}</span>` : html;
+const titleHtml = id => glowWrap(id, (BADGE_TITLES.has(id) ? BADGE_SVG : "") + esc(titleName(id)));
 const GROUPS = [
   { title:"Body", rows:[ {key:"skin", label:"Skin color", kind:"color"} ] },
   { title:"Hair", rows:[ {key:"hairType", label:"Hair type", kind:"type", list:HAIR_TYPES},
@@ -2405,7 +2411,7 @@ function walkDetailView(){
 /* ---------- Friends ---------- */
 let friendsPage = null, viewCode = null, pendingRemove = false; // friendsPage: null | "list" | "requests" | "profile"
 const friendTitle = p => p.title==="since" ? `Touching Grass since ${p.joined}` : titleName(p.title);
-const friendTitleHtml = p => (BADGE_TITLES.has(p.title) ? BADGE_SVG : "") + esc(friendTitle(p));
+const friendTitleHtml = p => glowWrap(p.title, (BADGE_TITLES.has(p.title) ? BADGE_SVG : "") + esc(friendTitle(p)));
 const playerByCode = code => social.byCode[code] || samplePlayer(code);
 const friendList = key => TEST_MODE ? state[key].map(samplePlayer).filter(Boolean) : (key==="friends" ? social.friends : social.incoming);
 const requestCount = () => TEST_MODE ? state.requests.length : social.incoming.length;
@@ -3384,8 +3390,11 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.24";
+const APP_VERSION = "1.25";
 const UPDATES = [
+  { v:"1.25", name:"Beta Tester title", date:"Oct 10", notes:[
+    "New <b>Beta Tester</b> title with a neon green glow. It is gift-only: open a Beta Tester code on the Gifts page to get it.",
+    "Gift codes can now work for more than one player. The Beta Tester code works for up to 20 players, once each."] },
   { v:"1.24", name:"Gifts and ALPHA Wolf", date:"Oct 10", notes:[
     "New <b>Gifts</b> page in the menu. It has a <b>drop spot</b>: drag a gift file onto it (or tap it, or type the code) to open a gift from a friend.",
     "The wolf shirt is now <b>ALPHA Wolf</b>, a gift-only cosmetic. It is not in the Shop and cannot be bought.",
@@ -3540,6 +3549,7 @@ function mainView(){
    first player to open it keeps the item. The server checks the code; nobody can make one without being an admin. */
 let inGifts = false, giftNote = null, giftCode = "", giftBusy = false, giftCanMake = null, giftMade = null, giftBlob = "", giftGot = null, giftChecking = false;
 const GIFT_ART = { "shirt:wolf": WOLF_SRC };
+const giftArt = key => GIFT_ART[key] ? `<img src="${GIFT_ART[key]}" alt="">` : `<span class="gift-title">${key.indexOf("title:")===0 ? titleHtml(key.slice(6)) : esc(giftItemName(key))}</span>`;
 const GIFT_ERRORS = { not_found:"That code isn't a real gift. Check it and try again.", used:"Someone already opened that gift.", slow_down:"Too many tries. Wait a few minutes.", not_allowed:"Only the game's owner can make gifts.", too_many:"You have a lot of unopened gifts. Let your friends open some first.", bad_item:"That item can't be gifted.", busy:"The server is busy. Try again." };
 const fmtGift = c => String(c||"").replace(/(.{4})(?=.)/g,"$1-");
 const giftItemName = key => { const k = String(key).split(":"), c = catBySlot(k[0]), it = c && findItem(c.key,k[1]); return it ? it[1] : "a gift"; };
@@ -3578,12 +3588,12 @@ async function giftHandleFile(file){
   }catch(e){}
   giftRedeem(code);
 }
-async function giftMake(item){
+async function giftMake(item, uses){
   if(giftBusy) return; giftBusy = true; giftNote = null;
   try{
-    const v = await rpc("gift_make", { p_item:item });
+    const v = await rpc("gift_make", { p_item:item, p_uses:Math.max(1, Math.min(50, uses|0 || 1)) });
     if(v && v.ok){
-      giftMade = { code:String(v.code), item:String(v.item) };
+      giftMade = { code:String(v.code), item:String(v.item), uses:Math.max(1, v.uses|0 || 1) };
       if(giftBlob){ try{ URL.revokeObjectURL(giftBlob); }catch(e){} }
       giftBlob = URL.createObjectURL(giftBlobFile(giftMade));
     } else giftNote = { bad:true, text: GIFT_ERRORS[v && v.error] || "That didn't work. Try again." };
@@ -3615,7 +3625,7 @@ function giftsView(){
   const back = `<div class="locker-top"><button class="backlink" data-act="close-gifts">‹ Quests</button><h2>Gifts</h2></div>`;
   const signed = huntSignedIn();
   const note = giftNote ? `<p class="${giftNote.bad ? "err" : "demo-note"}" role="status">${esc(giftNote.text)}</p>` : "";
-  const got = giftGot ? `<div class="gift-got"><img src="${GIFT_ART[giftGot] || ""}" alt=""><b>${esc(giftItemName(giftGot))}</b><button class="btn solid" data-act="gift-wear" data-item="${esc(giftGot)}">Wear it now</button></div>` : "";
+  const got = giftGot ? `<div class="gift-got">${giftArt(giftGot)}<b>${esc(giftItemName(giftGot))}</b><button class="btn solid" data-act="gift-wear" data-item="${esc(giftGot)}">Wear it now</button></div>` : "";
   const open = !signed
     ? `<div class="group"><h3>Sign in to open gifts</h3><p>Gifts are checked online so each one can only be opened once.</p>${ONLINE ? `<button class="btn solid wide" data-act="open-account">Sign in</button>` : `<p class="demo-note">Online accounts aren't set up yet.</p>`}</div>`
     : `<div class="dropspot" id="giftDrop" data-act="pick-gift" tabindex="0" role="button" aria-label="Drop spot. Drop a gift file here, or tap to choose one."><b>Drop spot</b><span>Drag a gift file here, or tap to choose it</span></div>
@@ -3624,12 +3634,13 @@ function giftsView(){
          <input class="text code-in" id="giftCode" maxlength="14" placeholder="Gift code" value="${esc(fmtGift(giftCode))}" autocomplete="off" autocapitalize="characters" spellcheck="false">
          <button class="btn wide" data-act="gift-redeem" ${giftCode.length===12 && !giftBusy ? "" : "disabled"}>Open gift</button></div>`;
   const make = signed && giftCanMake ? `<h3 class="sec-title">Give a gift</h3>
-    <div class="group"><p>Make a one-time gift for a friend. The first player to open it keeps it.</p>
-      <button class="btn solid wide" data-act="gift-make" data-item="shirt:wolf" ${giftBusy?"disabled":""}>Make an ALPHA Wolf gift</button>
+    <div class="group"><p>Make a gift for a friend. A single gift is one-time: the first player to open it keeps it. The Beta Tester code can be opened by up to 20 players, once each.</p>
+      <button class="btn solid wide" data-act="gift-make" data-item="shirt:wolf" data-uses="1" ${giftBusy?"disabled":""}>Make an ALPHA Wolf gift</button>
+      <button class="btn wide" style="margin-top:8px" data-act="gift-make" data-item="title:beta" data-uses="20" ${giftBusy?"disabled":""}>Make a Beta Tester code (20 players)</button>
       ${giftMade ? `<div class="gift-card" id="giftCard" draggable="true" title="Drag me to your friend's chat or desktop">
-          <img src="${GIFT_ART[giftMade.item] || ""}" alt=""><div><b>${esc(giftItemName(giftMade.item))}</b><span>${esc(fmtGift(giftMade.code))}</span></div></div>
+          ${giftArt(giftMade.item)}<div><b>${esc(giftItemName(giftMade.item))}</b><span>${esc(fmtGift(giftMade.code))}</span>${giftMade.uses>1 ? `<small>Works for ${giftMade.uses} players</small>` : ""}</div></div>
         <div class="ttt-row" style="margin-top:10px"><button class="btn solid" data-act="gift-download">Download</button>${navigator.share ? `<button class="btn" data-act="gift-share">Share</button>` : ""}<button class="btn" data-act="gift-copy">Copy code</button></div>
-        <p class="fine">Send the file or the code to your friend. They open Gifts and drop it on the drop spot. It works one time only.</p>` : ""}
+        <p class="fine">Send the file or the code to your friend. They open Gifts and drop it on the drop spot. A single gift works one time only.</p>` : ""}
     </div>` : "";
   return `<section class="locker gifts">${back}
     <p class="hunt-intro">Some cosmetics can't be bought. A friend has to give them to you.</p>
@@ -3704,7 +3715,7 @@ document.addEventListener("click", e=>{
   else if(act==="close-gifts"){ inGifts=false; render(); window.scrollTo(0,0); }
   else if(act==="pick-gift"){ const f = document.getElementById("giftFile"); if(f) f.click(); }
   else if(act==="gift-redeem"){ giftRedeem(giftCode); }
-  else if(act==="gift-make"){ giftMake(el.dataset.item); }
+  else if(act==="gift-make"){ giftMake(el.dataset.item, Number(el.dataset.uses)); }
   else if(act==="gift-download"){ giftDownload(); }
   else if(act==="gift-share"){ giftShare(); }
   else if(act==="gift-copy"){ giftCopy(); }
