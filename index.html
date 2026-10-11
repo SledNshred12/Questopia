@@ -911,38 +911,54 @@ function buildHuman(look, gear){
   if(t!=="bald"){
     const hg = new THREE.Group(); hg.position.set(0,1.56,-.01); hg.rotation.x = -.45;
     const buzz = t==="buzz" || t==="mohawk";   // mohawk has shaved sides
-    hg.add(new THREE.Mesh(
+    if(!(t==="short" && !hatOn)) hg.add(new THREE.Mesh(   // the full short style has its own shape
       new THREE.SphereGeometry(buzz?.372:.385,28,16,0,Math.PI*2,0,Math.PI*(buzz?.44:.5)), hair));
     if(t==="short"){
-      // messy, swept-forward hair: tousled clumps over a tidy cap, tapered sides with sideburns
-      const light = mat(new THREE.Color(look.hairColor).offsetHSL(0,0,.06).getStyle());
-      const up = new THREE.Vector3(0,1,0), q2 = new THREE.Quaternion();
-      const clump = (pol, az, sx, sy, sz, spin, lite, lift) => {
-        const n = new THREE.Vector3(Math.sin(pol)*Math.sin(az), Math.cos(pol), Math.sin(pol)*Math.cos(az)), r = .385 + (lift||0);
-        const o = part(new THREE.SphereGeometry(.1,14,10), lite ? light : hair, n.x*r, 1.55+n.y*r, n.z*r);
-        o.scale.set(sx,sy,sz); o.quaternion.setFromUnitVectors(up, n); q2.setFromAxisAngle(up, spin); o.quaternion.multiply(q2); g.add(o);
-      };
+      // textured, swept-forward hair (one full shape): volume on top, a jagged fringe that comes onto the forehead
+      // and dips toward one temple, sides down to the ears, back down to the nape. Low ridges give it a swept, chunky texture.
       if(!hatOn){
-        // top: layered tufts, swept toward the front-right
-        for(const [pol,az,sx,sy,sz,spin,lite,lift] of [
-          [.1,0,1.9,.7,1.1,-.5,0,.03], [.45,.5,2,.6,1,-.7,1,.02], [.45,-.5,1.9,.6,1,-.3,0,.02], [.5,1.6,1.8,.6,1,-1.2,0,.01],
-          [.5,-1.6,1.8,.6,1,.8,1,.01], [.5,2.7,1.8,.6,1,-.4,0,.01], [.5,-2.7,1.8,.6,1,.4,1,.01], [.55,3.14,1.8,.6,1,0,0,.01],
-          [.85,.7,2,.6,1,-.9,0,.02], [.85,-.2,2,.6,1,-.5,1,.02], [.85,-.95,1.8,.6,1,-.1,0,.02], [.85,1.7,1.9,.6,1,-1.2,1,.01],
-          [.85,-1.8,1.9,.6,1,.9,0,.01], [.85,2.8,1.9,.6,1,-.5,0,.01], [.85,-2.8,1.9,.6,1,.5,1,.01]
-        ]) clump(pol,az,sx,sy,sz,spin,lite,lift);
-        // fringe along the hairline, sweeping right and dipping at the temple
-        for(const [pol,az,sx,sy,sz,spin,lite,lift] of [
-          [1.08,-.85,1.7,.6,.9,.15,0,.015], [1.1,-.4,1.8,.6,.9,-.1,1,.02], [1.1,.1,1.9,.6,.9,-.35,0,.02],
-          [1.14,.6,1.9,.6,.9,-.6,1,.015], [1.25,1.05,1.7,.6,.9,-1,0,.01]
-        ]) clump(pol,az,sx,sy,sz,spin,lite,lift);
-        // a few stray tufts sticking up
-        for(const [az,pol,len] of [[.2,.12,.14],[1.4,.4,.11],[-1.2,.4,.12],[3,.45,.1]]){
+        const sm = (a,b,x) => { const k = Math.min(1, Math.max(0, (x-a)/(b-a))); return k*k*(3-2*k); };
+        const edgeAt = az => {   // how far down (angle from the top of the head) the hair reaches in each direction
+          const aa = Math.abs(az);
+          const fringe = 1.12 + .07*Math.max(0, az) + .07*Math.max(0, Math.sin(az*8 + 1.3)) + .025*Math.sin(az*13);
+          const side = 1.44 + .035*Math.sin(az*9), back = 1.64 + .03*Math.sin(az*7);
+          return fringe + (side - fringe)*sm(.75, 1.35, aa) + (back - side)*sm(1.9, 2.5, aa);
+        };
+        const shellR = (pol, az) => {
+          const front = Math.max(0, Math.cos(az)), top = Math.max(0, Math.cos(pol));
+          return .39 + .065*Math.pow(top, 1.3) + .03*front*top + .01*Math.sin(az*10 + pol*5)*Math.sin(pol*3.2);
+        };
+        const geo = new THREE.SphereGeometry(1, 80, 44, 0, Math.PI*2, 0, Math.PI*.95), pos = geo.attributes.position, v = new THREE.Vector3();
+        for(let i=0;i<pos.count;i++){
+          v.fromBufferAttribute(pos, i).normalize();
+          let pol = Math.acos(Math.max(-1, Math.min(1, v.y))); const az = Math.atan2(v.x, v.z), mp = edgeAt(az);
+          const atEdge = pol >= mp; if(atEdge) pol = mp;
+          const r = shellR(pol, az) + (atEdge ? .006 : 0), sp = Math.sin(pol);
+          pos.setXYZ(i, r*sp*Math.sin(az), 1.55 + r*Math.cos(pol), r*sp*Math.cos(az));
+        }
+        geo.computeVertexNormals();
+        g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color:look.hairColor, roughness:.8, metalness:0, side:THREE.DoubleSide })));
+        // low ridges that follow the sweep (forward and a little to one side)
+        const flow = new THREE.Vector3(.4,0,1).normalize(), mx = new THREE.Matrix4();
+        const lite = mat(new THREE.Color(look.hairColor).offsetHSL(0,0,.03).getStyle());
+        for(const [pol,az,len,wid,tone] of [
+          [.18,.6,2.8,1.2,1], [.3,-.8,2.7,1.15,0], [.32,1.5,2.6,1.1,1], [.5,-.15,2.8,1.2,0], [.55,.85,2.6,1.15,1],
+          [.62,-1.15,2.5,1.1,1], [.8,-.6,2.4,1.1,0], [.82,.3,2.4,1.1,1], [.85,1.15,2.2,1.05,0],
+          [.5,2.4,2.4,1.15,1], [.5,-2.4,2.4,1.15,0], [.45,3.14,2.4,1.15,1], [.95,1.9,2.2,1,1], [.95,-1.9,2.2,1,0]
+        ]){
           const n = new THREE.Vector3(Math.sin(pol)*Math.sin(az), Math.cos(pol), Math.sin(pol)*Math.cos(az));
-          const c = part(new THREE.ConeGeometry(.035,len,6), hair, n.x*(.4+len*.3), 1.55+n.y*(.4+len*.3), n.z*(.4+len*.3));
-          c.quaternion.setFromUnitVectors(up, new THREE.Vector3(n.x+.25, n.y, n.z+.3).normalize()); g.add(c);
+          const d = flow.clone(), tv = d.sub(n.clone().multiplyScalar(d.dot(n))).normalize(), bv = new THREE.Vector3().crossVectors(tv, n);
+          const r = shellR(pol, az) - .022, o = part(new THREE.SphereGeometry(.1,18,10), tone ? lite : hair, n.x*r, 1.55+n.y*r, n.z*r);
+          mx.makeBasis(tv, n, bv); o.quaternion.setFromRotationMatrix(mx); o.scale.set(len, .5, wid); g.add(o);
+        }
+        // a couple of flyaways
+        const up = new THREE.Vector3(0,1,0);
+        for(const [az,pol,len,lean] of [[.5,.2,.12,.35],[2.4,.4,.1,-.25],[-1.5,.45,.09,.3]]){
+          const n = new THREE.Vector3(Math.sin(pol)*Math.sin(az), Math.cos(pol), Math.sin(pol)*Math.cos(az)), r = shellR(pol, az) + len*.4;
+          const c = part(new THREE.ConeGeometry(.016,len,5), hair, n.x*r, 1.55+n.y*r, n.z*r);
+          c.quaternion.setFromUnitVectors(up, new THREE.Vector3(n.x+lean, n.y, n.z+.25).normalize()); g.add(c);
         }
       }
-      for(const sd of [-1,1]){ const sb = part(new THREE.SphereGeometry(.05,10,8), hair, sd*.335,1.57,.1); sb.scale.set(.5,1.3,.9); g.add(sb); }
     }
     if(t==="curly"){
       for(const [pol, n] of [[.25,1],[.7,6],[1.1,9],[1.3,10]]){
@@ -3462,10 +3478,12 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.29";
+const APP_VERSION = "1.30";
 const UPDATES = [
+  { v:"1.30", name:"New short hair", date:"Oct 10", notes:[
+    "The <b>Short</b> hair was redone as a full, textured, swept-forward style: volume on top, a jagged fringe that comes onto the forehead, and sides down to the ears."] },
   { v:"1.29", name:"Messy short hair", date:"Oct 10", notes:[
-    "The <b>Short</b> hair is now a messy, swept-forward style with layered tufts on top, a fringe that dips at the temple, and short sideburns."] },
+    "First try at a messy, swept-forward <b>Short</b> hair style."] },
   { v:"1.28", name:"Cleaner short hair", date:"Oct 10", notes:[
     "The <b>Short</b> hair got a cleaner look: a fuller cap that covers the ears and back of the neck, and a softer fringe that no longer sits over the eyes."] },
   { v:"1.27", name:"Longer short hair", date:"Oct 10", notes:[
