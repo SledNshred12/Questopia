@@ -2307,6 +2307,7 @@ function renderThumbs(){
 const GPS_QUESTS = {   // quests that have to be done with an Activity. mi = minimum distance, fast = top speed in m/s that still counts
   d2:{mi:.25}, d7:{mi:.3, fast:12}, d11:{mi:.5}, d14:{mi:.25}, w4:{mi:.5}, w11:{mi:.4}, s4:{mi:1.2}
 };
+const WALK_SLACK = .9;   // GPS cuts corners and drops tiny steps, so 90% of the distance counts
 const MI = 1609.344, MAX_ACC = 40, MAX_WALK = 6;     // metres per mile, worst GPS accuracy we trust (m), top walking/running speed (m/s)
 const WALKS_KEY = "questopia-walks-v1", LIVE_KEY = "questopia-live-v1";
 function readJSON(k, dflt){ try{ const v = JSON.parse(localStorage.getItem(k) || "null"); return v == null ? dflt : v; }catch(e){ return dflt; } }
@@ -2363,7 +2364,7 @@ function onFix(pos){
   if(d < Math.max(7, Math.min(acc, 25)*.6)){ paintLive(); return; } // standing still or GPS wobble: nothing counted
   const take = () => { live.dist += d; live.last = p; live.pts.push([p[0], p[1]]); live.fixes = (live.fixes||0) + 1; };
   if(dt > 60){ // the screen was off or the signal was lost for a while
-    if(dt <= 600 && v <= 2.5) take();
+    if(dt <= 1800 && v <= 3) take();
     else { live.gaps = (live.gaps||0) + 1; live.gapM = (live.gapM||0) + d; live.last = p; live.pts.push([p[0], p[1]]); }
   } else if(v > cap){ // faster than anyone walks (or bikes, for the bike quest): a car or bus
     live.fastM = (live.fastM||0) + d; live.last = p; live.pts.push([p[0], p[1]]);
@@ -2440,7 +2441,7 @@ function verifyActivity(a){
   const q = a.quest && activeFor(a.quest.kind, a.quest.id) ? a.quest : null, g = q && GPS_QUESTS[q.id];
   const fastM = a.fastM || 0, gapM = a.gapM || 0;
   if(g){
-    const needMs = minsFor(q.id)*60000, needM = g.mi*MI;
+    const needMs = minsFor(q.id)*60000, needM = g.mi*MI*WALK_SLACK;
     if(el < needMs) why.push({ k:"time", ms:needMs - el });
     if(d < needM) why.push({ k:"dist", m:needM - d });
   } else if(d < 50) why.push({ k:"short" });
@@ -2656,7 +2657,7 @@ function updateActivityUI(){
   if(st){ st.textContent = statusText(live); st.dataset.s = live.status; }
   const q = live.quest && activeFor(live.quest.kind, live.quest.id), g = q && GPS_QUESTS[q.id];
   if(g){
-    const needMs = minsFor(q.id)*60000, needM = g.mi*MI;
+    const needMs = minsFor(q.id)*60000, needM = g.mi*MI*WALK_SLACK;
     set("actTimeTxt", `${fmtDur(Math.min(el, needMs))} of ${fmtDur(needMs)}`);
     set("actDistTxt", `${fmtMi(Math.min(live.dist, needM))} of ${fmtMi(needM)}`);
     const tb = document.getElementById("actTimeBar"), db = document.getElementById("actDistBar");
@@ -2674,7 +2675,7 @@ function activityView(){
   if(!live){ inActivity = false; return mainView(); }
   const q = live.quest ? qInfo(live.quest.kind, live.quest.id) : null, g = q && GPS_QUESTS[q.id] && activeFor(live.quest.kind, live.quest.id) ? GPS_QUESTS[q.id] : null;
   if(actPage === "check") return activityCheckView(q);
-  const el = Date.now() - live.start, needMs = g ? minsFor(q.id)*60000 : 0, needM = g ? g.mi*MI : 0;
+  const el = Date.now() - live.start, needMs = g ? minsFor(q.id)*60000 : 0, needM = g ? g.mi*MI*WALK_SLACK : 0;
   const paused = live.status === "paused";
   return `
   <section class="activity">
@@ -3778,6 +3779,7 @@ const UPDATES = [
     "After you pick a username you can sign in with Google or tap \"I'll do this later\".",
     "It only asks once, and it never asks again when you open the website.",
     "Same account, one save: if this device and your online save differ, the game now combines them automatically (points, items, friends and quests) so nothing is lost.",
+    "Walking quests are a bit more forgiving: 90% of the distance counts, and if your phone screen locks and GPS pauses, the walk still counts when you open it again.",
     "A backup of this device's save from before combining is kept, and you can bring it back from the Account page."] },
   {v:"1.36",name:"Sign in later",date:"Oct 11, 2026",notes:["After you pick a username, you can sign in with Google or tap \"I'll do this later\".","It only asks once. It never asks again when you open the website."]},
   { v:"1.35", name:"Spider fix", date:"Oct 11", notes:[
