@@ -3773,15 +3773,17 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.36";
+const APP_VERSION = "1.38";
 const UPDATES = [
+  { v:"1.38", name:"Easier walks", date:"Oct 12", notes:[
+    "Walking quests are more forgiving: 90% of the distance counts.",
+    "If your phone screen locks and GPS pauses, the walk still counts when you open the game again (up to 30 minutes)."] },
+  { v:"1.37", name:"One save", date:"Oct 11", notes:[
+    "Same account on two devices? The game now combines this device and your online save automatically (points, items, friends and quests) so nothing is lost.",
+    "A backup of this device's save from before combining is kept. Bring it back from the Account page."] },
   { v:"1.36", name:"Sign in later", date:"Oct 11", notes:[
     "After you pick a username you can sign in with Google or tap \"I'll do this later\".",
-    "It only asks once, and it never asks again when you open the website.",
-    "Same account, one save: if this device and your online save differ, the game now combines them automatically (points, items, friends and quests) so nothing is lost.",
-    "Walking quests are a bit more forgiving: 90% of the distance counts, and if your phone screen locks and GPS pauses, the walk still counts when you open it again.",
-    "A backup of this device's save from before combining is kept, and you can bring it back from the Account page."] },
-  {v:"1.36",name:"Sign in later",date:"Oct 11, 2026",notes:["After you pick a username, you can sign in with Google or tap \"I'll do this later\".","It only asks once. It never asks again when you open the website."]},
+    "It only asks once, and it never asks again when you open the website."] },
   { v:"1.35", name:"Spider fix", date:"Oct 11", notes:[
     "The Halloween spider now stays on its thread, and the cobweb, spider and pumpkins sit behind the game so they never cover text."] },
   { v:"1.34", name:"Real sunsets", date:"Oct 11", notes:[
