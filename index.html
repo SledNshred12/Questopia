@@ -551,6 +551,20 @@ canvas{display:block}
 .add-friend .text{flex:1;min-width:0;font-size:16px;text-transform:uppercase}
 .add-friend .btn{min-width:0}
 .pending-btn{margin-top:12px}
+.feedback .wide{width:100%;margin:6px 0 10px}
+.fb-btns{display:flex;gap:10px;margin:22px 0 4px}
+.fb-btns .btn{flex:1}
+.fb-text{resize:vertical;min-height:96px;font-size:16px;text-transform:none}
+.fb-list{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.fb-card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:12px 14px}
+.fb-body{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.fb-meta{margin:6px 0 0;font-size:13px;color:var(--muted)}
+.fb-actions{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+.fb-sp{flex:1}
+.fb-vote{font:inherit;font-size:15px;background:var(--field);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+.fb-vote[aria-pressed="true"]{background:var(--moss);color:#fff;border-color:var(--moss)}
+.fb-chip{display:inline-block;padding:1px 8px;border-radius:999px;font-weight:700;font-size:12px;background:var(--sun-soft);color:#6B4A00}
+.fb-chip.fb-done{background:#D8F0DE;color:#1E6B34}.fb-chip.fb-declined{background:#EEE;color:#555}
 .sec-title{font-size:20px;margin:20px 2px 10px;display:flex;align-items:baseline;justify-content:space-between}
 .sec-title span{font-family:var(--body);font-size:14px;font-weight:600;color:var(--muted)}
 .flist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
@@ -3773,8 +3787,12 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.38";
+const APP_VERSION = "1.39";
 const UPDATES = [
+  { v:"1.39", name:"Report & ideas", date:"Oct 13", notes:[
+    "Two new buttons at the bottom of the home screen: <b>Report issue</b> and <b>Submit Idea</b>.",
+    "Post what went wrong or what you'd like added. Everyone can <b>like or dislike</b> posts, and the most liked show first.",
+    "You need to be signed in to post or vote."] },
   { v:"1.38", name:"Easier walks", date:"Oct 12", notes:[
     "Walking quests are more forgiving: 90% of the distance counts.",
     "If your phone screen locks and GPS pauses, the walk still counts when you open the game again (up to 30 minutes)."] },
@@ -3894,6 +3912,110 @@ function updatesView(){
 }
 document.addEventListener("toggle", e=>{ const d = e.target; if(d && d.classList && d.classList.contains("upd")){ d.open ? updOpen.add(d.dataset.v) : updOpen.delete(d.dataset.v); } }, true);
 
+/* ---------- Report an issue / Submit an idea ----------
+   Signed-in players post short notes and like or dislike each other's posts. The owner reads them here and can mark them. */
+let inFeedback = false, fbKind = "idea", fbDraft = "", fbBusy = false, fbNote = null, fbAdmin = null, fbLoading = false, fbVotesBusy = false;
+const fbLists = { issue:null, idea:null };
+const FB_ERRORS = { too_short:"Write a little more so we can understand it.", too_long:"That's too long. Keep it under 500 characters.", no_contact:"Please don't put links, emails or phone numbers in a post.",
+  slow_down:"That's 5 posts today. Come back tomorrow!", bad_kind:"Something went wrong. Try again.", gone:"That post is gone." };
+const FB_STATUS = { open:"", planned:"Planned", done:"Done", declined:"Not planned" };
+function textBlocked(raw){
+  const words = String(raw).split(/[\s,.;:!?()"]+/).filter(Boolean);
+  for(const w of words){
+    const plain = w.replace(/[^A-Za-z0-9]/g,""); if(!plain) continue;
+    const flat = leet(plain), sq = squeeze(flat);
+    if(NAME_WORDS.has(flat) || NAME_WORDS.has(sq)) return true;
+    if(NAME_RAW_ONLY.has(flat)) return true;
+    for(const b of NAME_ANYWHERE){ if(sq.includes(squeeze(b))) return true; }
+  }
+  return false;
+}
+function fbAgo(iso){
+  const s = Math.max(0, (Date.now() - Date.parse(iso))/1000);
+  if(!(s < 1e10)) return "";
+  return s < 90 ? "just now" : s < 3600 ? Math.round(s/60)+" min ago" : s < 86400 ? Math.round(s/3600)+" hr ago" : Math.round(s/86400)+" days ago";
+}
+async function fbLoad(kind){
+  if(!huntSignedIn() || fbLoading) return;
+  fbLoading = true;
+  try{
+    if(fbAdmin === null){ try{ fbAdmin = (await rpc("feedback_is_admin")) === true; }catch(e){ fbAdmin = false; } }
+    const j = await rpc("feedback_list", { p_kind:kind });
+    fbLists[kind] = (Array.isArray(j) ? j : []).slice(0,100).map(p=>({ id:Number(p.id)||0, body:String(p.body||"").slice(0,500), author:safeName(p.author),
+      status:FB_STATUS[p.status]!==undefined ? p.status : "open", at:String(p.created_at||""), up:Number(p.up)||0, down:Number(p.down)||0,
+      mine:p.mine===1||p.mine===-1 ? p.mine : 0, own:p.own===true }));
+  }catch(e){ fbNote = { bad:true, text:"Couldn't load the board. Try again in a moment." }; if(!fbLists[kind]) fbLists[kind] = []; }
+  fbLoading = false; if(inFeedback) softRender();
+}
+async function fbPost(){
+  if(fbBusy) return;
+  const body = fbDraft.trim().replace(/\s+/g," ");
+  if(body.length < 5){ fbNote = { bad:true, text:FB_ERRORS.too_short }; render(); return; }
+  if(textBlocked(body)){ fbNote = { bad:true, text:"Please keep it kind and clean. Try rewording your post." }; render(); return; }
+  if(/(https?:|www\.|\.com\b|@)/i.test(body) || /(\d\D{0,2}){7}/.test(body)){ fbNote = { bad:true, text:FB_ERRORS.no_contact }; render(); return; }
+  fbBusy = true; fbNote = null; render();
+  try{
+    const j = await rpc("feedback_post", { p_kind:fbKind, p_body:body });
+    if(j && j.ok){ fbDraft = ""; fbNote = { text: fbKind==="issue" ? "Thanks! Your report was sent." : "Thanks! Your idea was posted." }; }
+    else fbNote = { bad:true, text:FB_ERRORS[j && j.error] || "Couldn't post that. Try again." };
+  }catch(e){ fbNote = { bad:true, text:"Couldn't post that. Check your connection." }; }
+  fbBusy = false; render(); fbLoad(fbKind);
+}
+async function fbVote(id, v){
+  const list = fbLists[fbKind]; const p = list && list.find(x=>x.id===id); if(!p || fbVotesBusy) return;
+  const next = p.mine === v ? 0 : v;
+  if(p.mine===1) p.up--; if(p.mine===-1) p.down--;
+  if(next===1) p.up++; if(next===-1) p.down++;
+  p.mine = next; render();
+  fbVotesBusy = true;
+  try{ await rpc("feedback_vote", { p_post:id, p_v:next }); }catch(e){ fbNote = { bad:true, text:"Your vote didn't save. Try again." }; }
+  fbVotesBusy = false; fbLoad(fbKind);
+}
+async function fbRemove(id){
+  try{ await rpc("feedback_remove", { p_post:id }); }catch(e){}
+  fbLoad(fbKind);
+}
+async function fbSetStatus(id, st){
+  try{ await rpc("feedback_status", { p_post:id, p_status:st }); }catch(e){}
+  fbLoad(fbKind);
+}
+function fbCard(p){
+  const next = p.status==="open" ? "planned" : p.status==="planned" ? "done" : p.status==="done" ? "declined" : "open";
+  return `<li class="fb-card">
+    <p class="fb-body">${esc(p.body)}</p>
+    <p class="fb-meta">${esc(p.author)} · ${fbAgo(p.at)}${p.status!=="open" ? ` <span class="fb-chip fb-${p.status}">${FB_STATUS[p.status]}</span>` : ""}</p>
+    <div class="fb-actions">
+      <button class="fb-vote" data-act="fb-vote" data-id="${p.id}" data-v="1" aria-pressed="${p.mine===1}" aria-label="Like. ${p.up} likes">👍 <b>${p.up}</b></button>
+      <button class="fb-vote" data-act="fb-vote" data-id="${p.id}" data-v="-1" aria-pressed="${p.mine===-1}" aria-label="Dislike. ${p.down} dislikes">👎 <b>${p.down}</b></button>
+      <span class="fb-sp"></span>
+      ${fbAdmin ? `<button class="linkbtn" data-act="fb-status" data-id="${p.id}" data-st="${next}">Mark: ${FB_STATUS[next] || "Open"}</button>` : ""}
+      ${p.own || fbAdmin ? `<button class="linkbtn" data-act="fb-remove" data-id="${p.id}">Delete</button>` : ""}
+    </div></li>`;
+}
+function feedbackView(){
+  const isIssue = fbKind==="issue";
+  const back = `<div class="locker-top"><button class="backlink" data-act="close-feedback">‹ Quests</button><h2>${isIssue ? "Report issue" : "Submit idea"}</h2></div>`;
+  if(!huntSignedIn()) return `<section class="feedback">${back}
+    <div class="group"><h3>Sign in to post</h3><p>Posts and votes are tied to your account so the board stays friendly.</p>
+    ${ONLINE ? `<button class="btn solid wide" data-act="open-account">Sign in</button>` : `<p class="demo-note">Online accounts aren't set up yet.</p>`}</div></section>`;
+  const list = fbLists[fbKind];
+  const note = fbNote ? `<p class="${fbNote.bad ? "err" : "demo-note"}" role="status">${esc(fbNote.text)}</p>` : "";
+  return `<section class="feedback">${back}
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="${isIssue}" data-act="fb-kind" data-kind="issue">Issues</button>
+      <button class="tab" role="tab" aria-selected="${!isIssue}" data-act="fb-kind" data-kind="idea">Ideas</button>
+    </div>
+    <div class="group"><h3>${isIssue ? "What went wrong?" : "What should we add?"}</h3>
+      <textarea class="text fb-text" id="fbText" maxlength="500" rows="4" placeholder="${isIssue ? "Tell us what happened and what you were doing" : "Describe your idea"}">${esc(fbDraft)}</textarea>
+      <p class="fine"><span id="fbCount">${fbDraft.length}</span>/500 · No links, emails or phone numbers please.</p>
+      ${note}
+      <button class="btn solid wide" data-act="fb-post" ${fbBusy ? "disabled" : ""}>${fbBusy ? "Posting..." : isIssue ? "Send report" : "Post idea"}</button>
+    </div>
+    <h3 class="sec-title">${isIssue ? "Reported issues" : "Ideas"}<span class="fine" style="margin:0">Most liked first</span></h3>
+    ${list === null ? `<p class="fine">Loading...</p>` : list.length ? `<ul class="fb-list">${list.map(fbCard).join("")}</ul>` : `<p class="fine">Nothing here yet. Be the first!</p>`}
+  </section>`;
+}
+
 function mainView(){
   const panels = { daily:dailyPanel, weekly:weeklyPanel, season:seasonPanel };
   return `
@@ -3966,6 +4088,7 @@ function mainView(){
   </div>
   <section class="panel" role="tabpanel">${panels[tab]()}</section>
   <p class="note">Tap Start, go do the quest, and Complete unlocks when the timer ends. One quest at a time. Walk and hike quests use GPS: tap Start Activity and keep your screen on. Spend your points in the Locker or the Shop. Find them, your Friends List and My Walks under the menu button (the three lines) at the top.</p>
+  <div class="fb-btns"><button class="btn" data-act="open-feedback" data-kind="issue">Report issue</button><button class="btn" data-act="open-feedback" data-kind="idea">Submit Idea</button></div>
   ${ONLINE ? `<p class="acct-line">${cloud.session ? `☁ Saved online · ` : ""}<button class="linkbtn" data-act="open-account">${cloud.session ? "Account" : "Save your progress online"}</button> · <a class="linkbtn" href="privacy.html">Privacy</a></p>` : ""}`;
 }
 
@@ -4319,7 +4442,7 @@ function render(){
   if(!inShop && (tryTitle || Object.keys(tryGear).length)){ clearTryOn(); setAvatar(); } // try-on never outlives the Shop
   const welcome = !state.username;
   document.getElementById("app").innerHTML =
-    welcome ? welcomeView() : askSignIn ? signinPromptView() : editing ? editorView() : inAccount ? accountView() : inAdmin ? adminView() : inActivity ? activityView() : inWalks ? walksView() : inUpdates ? updatesView() : inGifts ? giftsView() : inHunts ? huntsView() : inTtt ? tttView() : inLocker ? lockerView() : inShop ? shopView()
+    welcome ? welcomeView() : askSignIn ? signinPromptView() : editing ? editorView() : inAccount ? accountView() : inAdmin ? adminView() : inActivity ? activityView() : inWalks ? walksView() : inUpdates ? updatesView() : inGifts ? giftsView() : inFeedback ? feedbackView() : inHunts ? huntsView() : inTtt ? tttView() : inLocker ? lockerView() : inShop ? shopView()
     : friendsPage==="requests" ? requestsView() : friendsPage==="profile" ? profileView()
     : friendsPage==="friend-locker" ? friendLockerView() : friendsPage==="new-challenge" ? newChallengeView() : friendsPage==="challenge" ? challengeView()
     : friendsPage ? friendsView() : mainView();
@@ -4361,6 +4484,13 @@ document.addEventListener("click", e=>{
   }
   else if(act==="start-free-walk"){ startFreeWalk(); }
   else if(act==="holi-toggle"){ setHolidayOff(!holiOff); render(); }
+  else if(act==="open-feedback"){ fbKind = el.dataset.kind==="issue" ? "issue" : "idea"; inFeedback=true; fbNote=null; render(); window.scrollTo(0,0); fbLoad(fbKind); }
+  else if(act==="close-feedback"){ inFeedback=false; render(); window.scrollTo(0,0); }
+  else if(act==="fb-kind"){ fbKind = el.dataset.kind==="issue" ? "issue" : "idea"; fbNote=null; render(); fbLoad(fbKind); }
+  else if(act==="fb-post"){ fbPost(); }
+  else if(act==="fb-vote"){ fbVote(+el.dataset.id, +el.dataset.v); }
+  else if(act==="fb-remove"){ fbRemove(+el.dataset.id); }
+  else if(act==="fb-status"){ fbSetStatus(+el.dataset.id, el.dataset.st); }
   else if(act==="open-gifts"){ menuOpen=false; inGifts=true; giftNote=null; render(); window.scrollTo(0,0); giftCheckMaker(); }
   else if(act==="close-gifts"){ inGifts=false; render(); window.scrollTo(0,0); }
   else if(act==="pick-gift"){ const f = document.getElementById("giftFile"); if(f) f.click(); }
@@ -4528,6 +4658,7 @@ document.addEventListener("submit", e=>{
   }
 });
 document.addEventListener("input", e=>{
+  if(e.target.id === "fbText"){ fbDraft = e.target.value.slice(0,500); const c = document.getElementById("fbCount"); if(c) c.textContent = fbDraft.length; return; }
   if(e.target.id === "rwd"){
     const v = +e.target.value;
     document.getElementById("rwdVal").textContent = v;
