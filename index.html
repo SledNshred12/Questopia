@@ -196,7 +196,7 @@ canvas{display:block}
 .points small{display:block;font-family:var(--body);font-weight:600;font-size:11px;opacity:.85;margin-top:3px}
 
 /* Tabs */
-.tabs{display:grid;grid-template-columns:repeat(3,1fr) auto;gap:6px;margin:22px 0 14px;
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:22px 0 14px;
   background:var(--paper);border:1px solid var(--line);padding:5px;border-radius:16px}
 .tab{
   border:0;background:transparent;border-radius:12px;padding:10px 4px;
@@ -204,9 +204,10 @@ canvas{display:block}
 }
 .tab[aria-selected="true"]{background:var(--moss);color:#fff}
 .tabs.fb-tabs,.feedback .tabs{grid-template-columns:repeat(3,1fr)}
-.filter-btn{display:inline-flex;align-items:center;gap:5px;padding:10px 10px;border-left:1px solid var(--line) !important;border-radius:12px;font:inherit;font-weight:600;color:var(--moss-dark)}
-.filter-btn.on{background:var(--sun-soft);color:#6B4A00}
-.filter-sheet{display:grid;gap:6px;margin:-6px 0 14px;padding:8px;background:var(--paper);border:1px solid var(--line);border-radius:16px}
+.filter-row{display:flex;justify-content:flex-end;margin:-4px 0 12px}
+.filter-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border:1px solid var(--line);border-radius:999px;background:var(--paper);font:inherit;font-weight:600;color:var(--moss-dark);cursor:pointer}
+.filter-btn.on{background:var(--sun-soft);color:#6B4A00;border-color:#E8CF8F}
+.filter-sheet{display:grid;gap:6px;margin:0 0 14px;padding:8px;background:var(--paper);border:1px solid var(--line);border-radius:16px}
 .filter-opt{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;font:inherit;color:var(--ink);background:var(--field);border:2px solid transparent;border-radius:12px;padding:9px 12px;cursor:pointer}
 .filter-opt span{font-size:13px;color:var(--muted)}
 .filter-opt[aria-pressed="true"]{border-color:var(--moss);background:var(--paper)}
@@ -569,6 +570,15 @@ canvas{display:block}
 .wx-txt span{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
 .wx-card.wx-bad .wx-txt span{color:#6B4A00}
 .wx-card .btn{flex:none}
+.pres{position:relative;display:inline-flex;flex:none}
+.pdot{position:absolute;top:-1px;right:-1px;width:16px;height:16px;border-radius:50%;border:3px solid var(--paper);z-index:2}
+.pdot.on{background:#2FBF5B;box-shadow:0 0 0 2px rgba(47,191,91,.25)}
+.pdot.off{background:#9AA29C}
+.pres-big{display:block;position:relative}
+.pres-big .pdot{top:8px;right:8px;width:22px;height:22px;border-width:4px}
+.pres-txt{display:block;font-size:13px;color:var(--muted)}
+.pres-txt.on{color:#1E7A3A;font-weight:700}
+.big-pres{text-align:center;margin:2px 0 6px}
 .fb-btns{display:flex;gap:10px;margin:22px 0 4px}
 .fb-btns .btn{flex:1}
 .fb-text{resize:vertical;min-height:96px;font-size:16px;text-transform:none}
@@ -1802,8 +1812,8 @@ function signOut(){ cloud.session = null; cloud.conflict = null; cloud.status = 
 /* ---------- Live friends (online) ----------
    The server only hands out a friend's name, title, avatar, unlocked items and points, and only to accepted friends.
    Everything that comes back is checked here again before it is drawn. */
-let social = { friends:[], incoming:[], outgoing:[], byCode:{}, loaded:false, busy:false, error:"", sig:"" };
-function resetSocial(){ social = { friends:[], incoming:[], outgoing:[], byCode:{}, loaded:false, busy:false, error:"", sig:"" }; }
+let social = { friends:[], incoming:[], outgoing:[], byCode:{}, presence:{}, loaded:false, busy:false, error:"", sig:"" };
+function resetSocial(){ social = { friends:[], incoming:[], outgoing:[], byCode:{}, presence:{}, loaded:false, busy:false, error:"", sig:"" }; }
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const safeName = n => { const v = String(n == null ? "" : n).slice(0,20); return v && /^[A-Za-z0-9_]+$/.test(v) && !nameBlocked(v) ? v : "Player"; };
 function cleanPlayer(r){
@@ -1835,6 +1845,28 @@ function softRender(){
   if(!state.username || editing || inAccount || inAdmin || (a && /^(INPUT|TEXTAREA)$/.test(a.tagName))) return;
   render();
 }
+/* ---------- Online status (friends only) ----------
+   While the game is open you ping the server once a minute. Only your ACCEPTED friends can see whether you are online
+   and when you were last on. You can turn this off in Account. */
+const PRES_ONLINE_S = 150;
+function presLabel(pr){
+  if(!pr || pr.hidden) return null;
+  const a = pr.ago;
+  if(a == null) return { on:false, text:"Hasn't been online yet" };
+  if(a < PRES_ONLINE_S) return { on:true, text:"Online now" };
+  const m = Math.round(a/60), h = Math.round(a/3600), d = Math.floor(a/86400);
+  return { on:false, text: "Last online " + (a < 3600 ? m + " min ago" : a < 86400 ? h + (h===1 ? " hour" : " hours") + " ago" : d < 2 ? "yesterday" : d < 30 ? d + " days ago" : "over a month ago") };
+}
+const presDot = code => { const l = presLabel(social.presence && social.presence[code]); return l ? `<span class="pdot ${l.on ? "on" : "off"}" role="img" aria-label="${l.on ? "Online" : "Offline"}"></span>` : ""; };
+const presText = code => { const l = presLabel(social.presence && social.presence[code]); return l ? `<span class="pres-txt ${l.on ? "on" : ""}">${l.text}</span>` : ""; };
+async function presencePing(){
+  if(!ONLINE || !cloud.session || cloud.conflict || document.hidden) return;
+  try{ await rpc("presence_ping", { p_visible: state.showOnline !== false }); }catch(e){}
+}
+setTimeout(presencePing, 2500);
+setInterval(presencePing, 60000);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) presencePing(); });
+
 async function refreshSocial(){
   if(!ONLINE || !cloud.session || social.busy || cloud.conflict) return;
   social.busy = true;
@@ -1843,10 +1875,18 @@ async function refreshSocial(){
     const friends = (j.friends||[]).map(cleanPlayer).filter(p=>p.code);
     const incoming = (j.incoming||[]).map(cleanPlayer).filter(p=>p.code);
     const outgoing = (j.outgoing||[]).map(o=>({ id:Number(o.id)||0, code:String(o.code||"").slice(0,9), name:safeName(o.name) }));
-    const sig = JSON.stringify([friends, incoming, outgoing]);
+    const presence = {};
+    try{
+      const pj = await rpc("presence_friends");
+      (Array.isArray(pj) ? pj : []).forEach(r=>{
+        const c = String(r && r.code || ""); if(!/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(c)) return;
+        presence[c] = r.hidden === true ? { hidden:true } : { ago: Number.isFinite(r.ago) ? Math.max(0, r.ago) : null };
+      });
+    }catch(e){}
+    const sig = JSON.stringify([friends, incoming, outgoing, Object.keys(presence).map(c=>[c, (presLabel(presence[c])||{}).text])]);
     const changed = !social.loaded || sig !== social.sig || social.error;
     const byCode = {}; incoming.forEach(p=>byCode[p.code]=p); friends.forEach(p=>byCode[p.code]=p);
-    Object.assign(social, { friends, incoming, outgoing, byCode, loaded:true, error:"", sig });
+    Object.assign(social, { friends, incoming, outgoing, byCode, presence, loaded:true, error:"", sig });
     if(changed) softRender();
   }catch(e){
     social.error = e.status===404 ? "Friends aren't set up on the server yet." : "Couldn't reach your friends right now.";
@@ -1901,6 +1941,7 @@ function accountView(){
     <div class="group"><h3>Signed in</h3>
       <p>${esc(ses.user.name || ses.user.email || "Player")}${ses.user.email && ses.user.name!==ses.user.email ? `<br><span class="fine">${esc(ses.user.email)}</span>` : ""}</p>
       <p class="stat">${esc(cloud.status || (state.dirty ? "Saving soon..." : "Saved online"))}</p>
+      <button class="btn wide" data-act="toggle-online" aria-pressed="${state.showOnline !== false}">Show friends when I'm online: <b>${state.showOnline !== false ? "On" : "Off"}</b></button>
       <button class="btn solid wide" data-act="save-now">Save now</button>
       <button class="btn wide" data-act="sign-out">Sign out</button>
     </div>${backupHtml()}
@@ -3023,8 +3064,8 @@ function friendsHeader(title, backAct, backLabel, page){
 }
 function friendRow(p){
   return `<li><button class="fbtn" data-act="view-friend" data-code="${p.code}">
-    <span class="me" style="background:${ringBg((p.gear||{}).border)}"><span class="me-in">${friendAvatar(p,"head",160)}</span></span>
-    <span class="f-txt"><b>${esc(p.name)}</b><span>${friendTitleHtml(p)}</span></span>
+    <span class="pres"><span class="me" style="background:${ringBg((p.gear||{}).border)}"><span class="me-in">${friendAvatar(p,"head",160)}</span></span>${presDot(p.code)}</span>
+    <span class="f-txt"><b>${esc(p.name)}</b><span>${friendTitleHtml(p)}</span>${presText(p.code)}</span>
     ${p.points != null ? `<span class="pts fpts" aria-label="${p.points} points">${p.points.toLocaleString("en-US")} pts</span>` : ""}
     <span class="chev" aria-hidden="true" style="font-size:24px">›</span>
   </button></li>`;
@@ -3090,8 +3131,9 @@ function profileView(){
   if(!p) return friendsView();
   return `<section class="friends profile">
     ${friendsHeader("Profile","friends-page","Friends")}
-    <div class="stage">${friendAvatar(p,"full",480)}</div>
+    <div class="stage"><span class="pres pres-big">${friendAvatar(p,"full",480)}${presDot(p.code)}</span></div>
     <div class="big-name">${esc(p.name)}</div>
+    <div class="big-pres">${presText(p.code)}</div>
     <div class="big-title">${friendTitleHtml(p)}</div>
     <div class="facts">${p.points != null ? `<span class="pts fpts">${p.points.toLocaleString("en-US")} points</span>` : ""}<span>Joined ${p.joined}</span><span>Code ${p.code}</span></div>
     <div class="pbtns">
@@ -3985,8 +4027,12 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.43";
+const APP_VERSION = "1.44";
 const UPDATES = [
+  { v:"1.44", name:"Friends online", date:"Oct 14", notes:[
+    "Your friends now show a <b>green dot</b> on the top right of their picture when they're online, and a <b>grey dot</b> with \"Last online ...\" when they're not.",
+    "Only accepted friends can see it. You can turn it off in Account (\"Show friends when I'm online\").",
+    "The Filter button moved under the Daily, Weekly and Season tabs."] },
   { v:"1.43", name:"Quest filter", date:"Oct 14", notes:[
     "New <b>Filter</b> button next to the Daily, Weekly and Season tabs.",
     "Show only quests that need a camera, quests that don't need a camera, GPS walks and hikes, or sunset quests. It works on daily, weekly and season quests, and the game remembers your choice."] },
@@ -4303,8 +4349,8 @@ function mainView(){
   ${weatherCard()}
   <div class="tabs" role="tablist">
     ${["daily","weekly","season"].map(t=>`<button class="tab" role="tab" aria-selected="${tab===t}" data-act="tab" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}
-    <button class="tab filter-btn ${qFilter!=="all" ? "on" : ""}" data-act="open-filter" aria-expanded="${filterOpen}" aria-label="Filter quests${qFilter!=="all" ? " (on)" : ""}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg> Filter</button>
   </div>
+  <div class="filter-row"><button class="filter-btn ${qFilter!=="all" ? "on" : ""}" data-act="open-filter" aria-expanded="${filterOpen}" aria-label="Filter quests${qFilter!=="all" ? " (on)" : ""}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg> Filter</button></div>
   ${filterSheet()}
   <section class="panel" role="tabpanel">${panels[tab]()}</section>
 
@@ -4857,6 +4903,7 @@ document.addEventListener("click", e=>{
   else if(act==="start"){ startQuest(el.dataset.kind, el.dataset.id); }
   else if(act==="cancel"){ cancelQuest(); }
   else if(act==="log"){ logSeasonQuest(el.dataset.id); }
+  else if(act==="toggle-online"){ state.showOnline = state.showOnline === false; save(); presencePing(); render(); toast(state.showOnline !== false ? "Friends can see when you're online" : "Your online status is hidden"); }
   else if(act==="open-filter"){ filterOpen = !filterOpen; render(); }
   else if(act==="filter-set"){ setQFilter(el.dataset.key); }
   else if(act==="wx-enable"){ wxEnable(); }
