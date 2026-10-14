@@ -565,6 +565,7 @@ canvas{display:block}
 .fb-vote[aria-pressed="true"]{background:var(--moss);color:#fff;border-color:var(--moss)}
 .fb-chip{display:inline-block;padding:1px 8px;border-radius:999px;font-weight:700;font-size:12px;background:var(--sun-soft);color:#6B4A00}
 .fb-chip.fb-done{background:#D8F0DE;color:#1E6B34}.fb-chip.fb-declined{background:#EEE;color:#555}
+.q-meta .proof-tag{font-weight:700;color:#A0522D;white-space:normal}
 .sec-title{font-size:20px;margin:20px 2px 10px;display:flex;align-items:baseline;justify-content:space-between}
 .sec-title span{font-family:var(--body);font-size:14px;font-weight:600;color:var(--muted)}
 .flist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
@@ -614,6 +615,7 @@ canvas{display:block}
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="sunPhoto" accept="image/*" capture="environment" hidden>
+<input type="file" id="qPhoto" accept="image/*" capture="environment" hidden>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -1235,35 +1237,24 @@ function loop(t){ draw(t); requestAnimationFrame(loop); }
 
 /* ---------- Quests ---------- */
 const DAILY_POOL = [
-  { id:"d1",  title:"Go outside for 5 minutes", pts:10 },
   { id:"d2",  title:"Take a 10-minute walk", pts:10 },
   { id:"d3",  title:"Eat a snack or meal outside", pts:10 },
   { id:"d4",  title:"Snap a photo of something cool outside", pts:10 },
-  { id:"d5",  title:"Listen to a song or podcast outside", pts:10 },
-  { id:"d6",  title:"Sit outside and chill for 10 minutes", pts:10 },
   { id:"d7",  title:"Walk or bike somewhere instead of getting a ride", pts:15 },
-  { id:"d8",  title:"Shoot hoops, kick a ball or toss a frisbee for 10 minutes", pts:15 },
+  { id:"d8",  title:"Shoot hoops, kick a ball or toss a frisbee", pts:15 },
   { id:"d9",  title:"Watch the sunset", pts:15 },
-  { id:"d10", title:"Stretch or work out outside for 10 minutes", pts:15 },
   { id:"d11", title:"Take a 20-minute walk", pts:15 },
   { id:"d12", title:"Pick up 5 pieces of trash", pts:10 },
-  { id:"d13", title:"Find a new spot outside to hang out", pts:10 },
-  { id:"d14", title:"Call or FaceTime a friend while you walk", pts:15 },
-  { id:"d15", title:"Do homework or read outside for 20 minutes", pts:15 },
-  { id:"d16", title:"Spot 3 different birds, bugs or plants", pts:10 }
+  { id:"d16", title:"Photograph 3 different birds, bugs or plants", pts:10 }
 ];
 const WEEKLY_POOL = [
-  { id:"w1",  title:"Spend 2 hours outside in total", pts:50 },
   { id:"w2",  title:"Check out a park, trail or spot you've never been to", pts:60 },
-  { id:"w3",  title:"Hang out with a friend outside instead of gaming", pts:50 },
   { id:"w4",  title:"Go for a walk with a friend or family member", pts:40 },
   { id:"w5",  title:"Eat a meal or have a picnic outside", pts:40 },
   { id:"w6",  title:"Try something new outside, like skating, frisbee golf or climbing", pts:70 },
-  { id:"w7",  title:"Go outside on 5 different days", pts:50 },
   { id:"w8",  title:"Play a pickup game or sport outside", pts:50 },
   { id:"w9",  title:"Watch a sunset with someone", pts:40 },
-  { id:"w10", title:"Spend a whole afternoon outside", pts:60 },
-  { id:"w11", title:"Take a photo walk and send your best pic to a friend", pts:40 }
+  { id:"w11", title:"Go on a 20-minute photo walk", pts:40 }
 ];
 const SEASON = {
   id:"fall-2026", name:"Fall 2026", end:new Date(2026,11,21,23,59,59),
@@ -1272,9 +1263,8 @@ const SEASON = {
     { id:"s2", title:"Visit 3 new parks or trails", target:3, pts:150 },
     { id:"s3", title:"Photograph 10 different fall leaves", target:10, pts:100 },
     { id:"s4", title:"Go on a 1-hour hike or long walk", target:1, pts:150 },
-    { id:"s5", title:"Spend a whole afternoon outside with friends", target:1, pts:200 },
     { id:"s6", title:"Finish 20 daily quests", target:20, pts:250, auto:"dailies" },
-    { id:"s7", title:"Complete every season quest", target:6, pts:0, auto:"season" }
+    { id:"s7", title:"Complete every season quest", target:5, pts:0, auto:"season" }
   ],
   titleId:"fall2026" // the champion title, with a badge, for finishing all the quests above
 };
@@ -1392,6 +1382,61 @@ setInterval(()=>{
   const ph = [sunDoneToday(), !w ? "x" : now < w.open ? "early" : now <= w.close ? "open" : "late"].join();
   if(ph !== sunPhase){ const first = !sunPhase; sunPhase = ph; if(!first) softRender(); }
 }, 30000);
+
+/* ---------- Photo proof ----------
+   Some quests are finished with a photo taken right then. The photo is checked on your phone (it is new, it isn't a blank
+   picture, and it hasn't been used before) and is never uploaded or saved. */
+const PHOTO_QUESTS = {
+  d3:{n:1,hint:"your food, outside"}, d4:{n:1,hint:"something cool"}, d8:{n:1,hint:"you playing"}, d12:{n:1,hint:"the trash you picked up"},
+  d16:{n:3,hint:"a bird, bug or plant"}, w2:{n:1,hint:"the new spot"}, w5:{n:1,hint:"your meal outside"}, w6:{n:1,hint:"you trying it"}, w8:{n:1,hint:"the game"},
+  s2:{n:1,hint:"the new park or trail"}, s3:{n:1,hint:"a fall leaf"}
+};
+const PROOF_FRESH_MS = 10*60000;
+let qPhotoFor = null, photoOk = false;
+const photoKey = (kind, id) => `${kind}:${id}:${kind==="season" ? SEASON.id+":"+dayKey() : bucketKey(kind)}`;
+const photoCount = (kind, id) => (state.photoProg && state.photoProg[photoKey(kind, id)]) || 0;
+function photoQuestOpen(kind, id){
+  const pq = PHOTO_QUESTS[id]; if(!pq) return;
+  if(kind==="season" && ONCE_A_DAY.has(id) && (state.season.last||{})[id]===dayKey()){ toast("Nice! Come back tomorrow for the next one."); return; }
+  qPhotoFor = { kind, id };
+  const f = document.getElementById("qPhoto"); if(f) f.click();
+}
+async function photoLooksReal(file){
+  try{
+    const bmp = await createImageBitmap(file), c = document.createElement("canvas"); c.width = 32; c.height = 32;
+    const x = c.getContext("2d"); x.drawImage(bmp, 0, 0, 32, 32);
+    const px = x.getImageData(0,0,32,32).data; let sum = 0, sq = 0, n = px.length/4;
+    for(let i=0;i<px.length;i+=4){ const l = .3*px[i] + .59*px[i+1] + .11*px[i+2]; sum += l; sq += l*l; }
+    const mean = sum/n, sd = Math.sqrt(Math.max(0, sq/n - mean*mean));
+    return sd >= 10 && mean > 8 && mean < 250;   // not a covered lens, not a blank page
+  }catch(e){ return true; }
+}
+async function photoFingerprint(file){
+  try{
+    const buf = await file.slice(0, 262144).arrayBuffer(), d = await crypto.subtle.digest("SHA-256", buf);
+    return file.size + ":" + Array.from(new Uint8Array(d)).slice(0,10).map(b=>b.toString(16).padStart(2,"0")).join("");
+  }catch(e){ return file.size + ":" + file.lastModified; }
+}
+async function qPhotoGot(file){
+  const t = qPhotoFor; qPhotoFor = null;
+  if(!t || !file) return;
+  const pq = PHOTO_QUESTS[t.id]; if(!pq) return;
+  if(!/^image\//.test(file.type || "image/")){ toast("That isn't a photo."); return; }
+  if(file.lastModified && Date.now() - file.lastModified > PROOF_FRESH_MS){ toast("Take a new photo right now. Older pictures don't count."); return; }
+  if(!(await photoLooksReal(file))){ toast("That photo is too dark or blank. Try again."); return; }
+  const fp = await photoFingerprint(file);
+  state.photoSeen = Array.isArray(state.photoSeen) ? state.photoSeen : [];
+  if(state.photoSeen.includes(fp)){ toast("You already used that photo. Take a new one."); return; }
+  state.photoSeen.push(fp); if(state.photoSeen.length > 300) state.photoSeen = state.photoSeen.slice(-300);
+  state.photoProg = state.photoProg || {};
+  const k = photoKey(t.kind, t.id), got = (state.photoProg[k]||0) + 1;
+  if(got < pq.n){ state.photoProg[k] = got; save(); render(); toast(`Photo ${got} of ${pq.n}. Keep going!`); return; }
+  delete state.photoProg[k];
+  photoOk = true;
+  if(t.kind==="season") logSeasonQuest(t.id); else toggle(t.kind, t.id);
+  photoOk = false;
+  save(); render();
+}
 
 /* ---------- Helpers ---------- */
 const pad = n => String(n).padStart(2,"0");
@@ -1869,6 +1914,12 @@ function timerDone(kind, id){
 }
 function questButton(kind, id, done, logAct){
   const act = logAct ? "log" : "toggle";
+  if(done && (PHOTO_QUESTS[id] || GPS_QUESTS[id] || SUNSET_QUESTS.has(id))) return `<button class="btn" disabled>Done</button>`;   // proven quests can't be un-done
+  if(PHOTO_QUESTS[id]){
+    if(kind==="season" && ONCE_A_DAY.has(id) && (state.season.last||{})[id]===dayKey()) return `<button class="btn" disabled>Tomorrow</button>`;
+    const pq = PHOTO_QUESTS[id], c = photoCount(kind, id);
+    return `<button class="btn solid" data-act="photo-quest" data-kind="${kind}" data-id="${id}">📷 ${pq.n>1 ? `Photo ${c+1}/${pq.n}` : "Take photo"}</button>`;
+  }
   if(done) return logAct
     ? `<button class="btn" disabled>Done</button>`
     : `<button class="btn" data-act="toggle" data-kind="${kind}" data-id="${id}" aria-pressed="true">Done</button>`;
@@ -1885,19 +1936,22 @@ function questButton(kind, id, done, logAct){
 }
 function questMeta(kind, q){
   const a = activeFor(kind, q.id);
+  if(PHOTO_QUESTS[q.id]) return `<span class="proof-tag">📷 Photo of ${PHOTO_QUESTS[q.id].hint}</span>` + sunsetMeta(q.id);
   return `<span>${minsFor(q.id)>=60 ? minsFor(q.id)/60+" hr" : minsFor(q.id)+" min"}</span>` +
     (GPS_QUESTS[q.id] ? `<span class="gps-tag">GPS · ${GPS_QUESTS[q.id].mi} mi</span>` : "") + sunsetMeta(q.id) +
     (a ? `<button class="linkbtn" data-act="cancel">Cancel</button>` : "");
 }
 function logSeasonQuest(id){
+  if(PHOTO_QUESTS[id] && !photoOk){ photoQuestOpen("season", id); return; }
   if(GPS_QUESTS[id]){ toast("This one needs an Activity. Tap Start Activity."); return; }
   if(SUNSET_QUESTS.has(id) && !sunPhotoOk){ toast("Take a photo of the sunset to finish this one."); return; }
-  if(!timerDone("season", id)) return;
+  if(!(PHOTO_QUESTS[id] && photoOk) && !timerDone("season", id)) return;
   state.active = null;
   state.season.last = Object.assign(state.season.last||{}, { [id]: dayKey() });
   bumpSeason(id, 1); save(); render();
 }
 function toggle(kind, id){
+  if(PHOTO_QUESTS[id] && !photoOk){ photoQuestOpen(kind, id); return; }
   const pool = kind==="daily" ? DAILY_POOL : WEEKLY_POOL;
   const q = pool.find(x=>x.id===id); if(!q) return;
   const bucket = state[kind];
@@ -1914,7 +1968,7 @@ function toggle(kind, id){
   } else {
     if(GPS_QUESTS[id]){ toast("This one needs an Activity. Tap Start Activity."); return; } // walk quests are only completed by a finished GPS Activity
     if(SUNSET_QUESTS.has(id) && !sunPhotoOk){ toast("Take a photo of the sunset to finish this one."); return; }
-    if(!timerDone(kind, id)) return;
+    if(!(PHOTO_QUESTS[id] && photoOk) && !timerDone(kind, id)) return;
     state.active = null;
     bucket.done.push(id);
     const amt = payFor(q.pts);
@@ -3787,8 +3841,13 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.39";
+const APP_VERSION = "1.40";
 const UPDATES = [
+  { v:"1.40", name:"Prove it", date:"Oct 13", notes:[
+    "Every quest now needs proof. Quests you can't prove are gone: sitting outside, listening to music, phone calls, homework, workouts, and the hours-outside quests.",
+    "Walks and hikes are proven with GPS, sunsets with a sunset-hour photo, and the rest with a <b>new photo</b> taken right then.",
+    "Photos are checked on your phone, can't be reused, and are never uploaded or saved.",
+    "Proven quests can't be un-done."] },
   { v:"1.39", name:"Report & ideas", date:"Oct 13", notes:[
     "Two new buttons at the bottom of the home screen: <b>Report issue</b> and <b>Submit Idea</b>.",
     "Post what went wrong or what you'd like added. Everyone can <b>like or dislike</b> posts, and the most liked show first.",
@@ -4087,7 +4146,7 @@ function mainView(){
     ${["daily","weekly","season"].map(t=>`<button class="tab" role="tab" aria-selected="${tab===t}" data-act="tab" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}
   </div>
   <section class="panel" role="tabpanel">${panels[tab]()}</section>
-  <p class="note">Tap Start, go do the quest, and Complete unlocks when the timer ends. One quest at a time. Walk and hike quests use GPS: tap Start Activity and keep your screen on. Spend your points in the Locker or the Shop. Find them, your Friends List and My Walks under the menu button (the three lines) at the top.</p>
+  <p class="note">Every quest needs proof. Tap Take photo and snap a new picture, or tap Start Activity for walks and hikes so your GPS can check them. Sunset quests need a photo during the sunset hour. Spend your points in the Locker or the Shop. Find them, your Friends List and My Walks under the menu button (the three lines) at the top.</p>
   <div class="fb-btns"><button class="btn" data-act="open-feedback" data-kind="issue">Report issue</button><button class="btn" data-act="open-feedback" data-kind="idea">Submit Idea</button></div>
   ${ONLINE ? `<p class="acct-line">${cloud.session ? `☁ Saved online · ` : ""}<button class="linkbtn" data-act="open-account">${cloud.session ? "Account" : "Save your progress online"}</button> · <a class="linkbtn" href="privacy.html">Privacy</a></p>` : ""}`;
 }
@@ -4434,7 +4493,7 @@ document.addEventListener("dragstart", e=>{
   try{ e.dataTransfer.setData("DownloadURL", `application/json:${giftFileName(giftMade.item)}:${giftBlob}`); }catch(err){}
   e.dataTransfer.effectAllowed = "copy";
 });
-document.addEventListener("change", e=>{ if(e.target.id==="sunPhoto"){ const f = e.target.files && e.target.files[0]; e.target.value = ""; sunPhotoGot(f); } });
+document.addEventListener("change", e=>{ if(e.target.id==="qPhoto"){ const f = e.target.files && e.target.files[0]; e.target.value = ""; qPhotoGot(f); return; } if(e.target.id==="sunPhoto"){ const f = e.target.files && e.target.files[0]; e.target.value = ""; sunPhotoGot(f); } });
 document.addEventListener("change", e=>{ if(e.target.id==="giftFile"){ const f = e.target.files && e.target.files[0]; e.target.value = ""; giftHandleFile(f); } });
 document.addEventListener("keydown", e=>{ if((e.key==="Enter"||e.key===" ") && e.target.id==="giftDrop"){ e.preventDefault(); const f = document.getElementById("giftFile"); if(f) f.click(); } });
 
@@ -4637,6 +4696,7 @@ document.addEventListener("click", e=>{
   else if(act==="start"){ startQuest(el.dataset.kind, el.dataset.id); }
   else if(act==="cancel"){ cancelQuest(); }
   else if(act==="log"){ logSeasonQuest(el.dataset.id); }
+  else if(act==="photo-quest"){ photoQuestOpen(el.dataset.kind, el.dataset.id); }
   else if(act==="sun-find"){ sunFind(); }
   else if(act==="sun-photo"){ sunPhotoOpen(el.dataset.kind, el.dataset.id); }
 });
