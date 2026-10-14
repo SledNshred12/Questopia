@@ -196,13 +196,22 @@ canvas{display:block}
 .points small{display:block;font-family:var(--body);font-weight:600;font-size:11px;opacity:.85;margin-top:3px}
 
 /* Tabs */
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:22px 0 14px;
+.tabs{display:grid;grid-template-columns:repeat(3,1fr) auto;gap:6px;margin:22px 0 14px;
   background:var(--paper);border:1px solid var(--line);padding:5px;border-radius:16px}
 .tab{
   border:0;background:transparent;border-radius:12px;padding:10px 4px;
   font-weight:600;color:var(--muted);
 }
 .tab[aria-selected="true"]{background:var(--moss);color:#fff}
+.tabs.fb-tabs,.feedback .tabs{grid-template-columns:repeat(3,1fr)}
+.filter-btn{display:inline-flex;align-items:center;gap:5px;padding:10px 10px;border-left:1px solid var(--line) !important;border-radius:12px;font:inherit;font-weight:600;color:var(--moss-dark)}
+.filter-btn.on{background:var(--sun-soft);color:#6B4A00}
+.filter-sheet{display:grid;gap:6px;margin:-6px 0 14px;padding:8px;background:var(--paper);border:1px solid var(--line);border-radius:16px}
+.filter-opt{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;font:inherit;color:var(--ink);background:var(--field);border:2px solid transparent;border-radius:12px;padding:9px 12px;cursor:pointer}
+.filter-opt span{font-size:13px;color:var(--muted)}
+.filter-opt[aria-pressed="true"]{border-color:var(--moss);background:var(--paper)}
+.filter-note{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 6px;font-size:14px;color:#6B4A00;background:var(--sun-soft);border-radius:12px;padding:6px 12px}
+.filter-empty{list-style:none;padding:16px 4px;color:var(--muted);text-align:center}
 
 /* Panel */
 .panel{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:18px 18px 6px}
@@ -1522,8 +1531,47 @@ function weatherCard(){
 }
 function indoorSection(){
   const i = wxInfo(); if(!i || !i.indoor) return "";
-  const list = pick(INDOOR_POOL, "indoor"+state.daily.key, 3);
+  const list = pick(INDOOR_POOL, "indoor"+state.daily.key, 3).filter(q=>qMatches(q.id));
+  if(!list.length) return "";
   return `<div class="panel-head" style="margin-top:18px"><h2>Indoor quests</h2><span>For today's weather</span></div><ul class="quests">${questRowsFor("daily", list)}</ul>`;
+}
+
+/* ---------- Quest filter: what a quest needs (camera, GPS, sunset) ---------- */
+const FILTER_KEY = "questopia-filter-v1";
+const QFILTERS = [
+  { key:"all",   label:"All quests",       note:"Everything" },
+  { key:"camera",label:"📷 Needs a camera", note:"Photo and sunset quests" },
+  { key:"nocam", label:"🚫 No camera",      note:"Quests that don't need photos" },
+  { key:"gps",   label:"📍 Needs GPS",      note:"Walks and hikes with an Activity" },
+  { key:"sun",   label:"🌅 Sunset",         note:"Only during the sunset hour" }
+];
+let qFilter = "all"; try{ const v = localStorage.getItem(FILTER_KEY); if(QFILTERS.some(f=>f.key===v)) qFilter = v; }catch(e){}
+let filterOpen = false;
+function needsCamera(id){ return !!PHOTO_QUESTS[id] || SUNSET_QUESTS.has(id); }
+function qMatches(id){
+  if(qFilter==="all") return true;
+  if(qFilter==="camera") return needsCamera(id);
+  if(qFilter==="nocam") return !needsCamera(id);
+  if(qFilter==="gps") return !!GPS_QUESTS[id];
+  if(qFilter==="sun") return SUNSET_QUESTS.has(id);
+  return true;
+}
+function setQFilter(k){
+  qFilter = QFILTERS.some(f=>f.key===k) ? k : "all"; filterOpen = false;
+  try{ localStorage.setItem(FILTER_KEY, qFilter); }catch(e){}
+  render();
+}
+function filterNote(shown, total){
+  if(qFilter==="all") return "";
+  const f = QFILTERS.find(x=>x.key===qFilter);
+  return `<p class="filter-note"><span>Filter: <b>${esc(f.label)}</b> · showing ${shown} of ${total}</span><button class="linkbtn" data-act="filter-set" data-key="all">Clear</button></p>`;
+}
+function filterEmpty(){ return `<li class="filter-empty">None of these quests match. <button class="linkbtn" data-act="filter-set" data-key="all">Clear the filter</button></li>`; }
+function filterSheet(){
+  if(!filterOpen) return "";
+  return `<div class="filter-sheet" role="group" aria-label="Filter quests">
+    ${QFILTERS.map(f=>`<button class="filter-opt" data-act="filter-set" data-key="${f.key}" aria-pressed="${qFilter===f.key}"><b>${f.label}</b><span>${f.note}</span></button>`).join("")}
+  </div>`;
 }
 
 /* ---------- Helpers ---------- */
@@ -2218,6 +2266,9 @@ function questRows(kind){
   return questRowsFor(kind, pick(pool, kind+key, 3));
 }
 function questRowsFor(kind, list){
+  const all = list.length;
+  list = list.filter(q=>qMatches(q.id));
+  if(!list.length) return filterEmpty();
   return list.map(q=>{
     const done = state[kind].done.includes(q.id);
     return `
@@ -2235,17 +2286,18 @@ function dailyPanel(){
   const list = pick(DAILY_POOL, "daily"+state.daily.key, 3);
   const n = list.filter(q=>state.daily.done.includes(q.id)).length;
   return `<div class="panel-head"><h2>Today</h2><span>${n} of 3 done · resets at midnight</span></div>
-    <ul class="quests">${questRows("daily")}</ul>${indoorSection()}`;
+    ${filterNote(pick(DAILY_POOL, "daily"+state.daily.key, 3).filter(q=>qMatches(q.id)).length, 3)}<ul class="quests">${questRows("daily")}</ul>${indoorSection()}`;
 }
 function weeklyPanel(){
   const list = pick(WEEKLY_POOL, "weekly"+state.weekly.key, 3);
   const n = list.filter(q=>state.weekly.done.includes(q.id)).length;
   return `<div class="panel-head"><h2>This week</h2><span>${n} of 3 done · resets Monday</span></div>
-    <ul class="quests">${questRows("weekly")}</ul>`;
+    ${filterNote(pick(WEEKLY_POOL, "weekly"+state.weekly.key, 3).filter(q=>qMatches(q.id)).length, 3)}<ul class="quests">${questRows("weekly")}</ul>`;
 }
 function seasonPanel(){
   const left = Math.max(0, Math.ceil((SEASON.end - new Date())/864e5));
-  const rows = SEASON.quests.map(q=>{
+  const shownQs = SEASON.quests.filter(q=>qFilter==="all" || (!q.auto && qMatches(q.id)));
+  const rows = (shownQs.length ? shownQs : []).map(q=>{
     const finale = q.auto==="season";
     const c = finale ? seasonDoneCount() : (state.season.counts[q.id]||0);
     const done = c>=q.target;
@@ -2264,7 +2316,7 @@ function seasonPanel(){
     </li>`;
   }).join("");
   return `<div class="panel-head"><h2>${SEASON.name}</h2><span>${left>0?left+" days left":"Season ended"}</span></div>
-    <ul class="quests">${rows}</ul>`;
+    ${filterNote(shownQs.length, SEASON.quests.length)}<ul class="quests">${rows || filterEmpty()}</ul>`;
 }
 
 /* ---------- Locker ---------- */
@@ -3933,8 +3985,11 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.42";
+const APP_VERSION = "1.43";
 const UPDATES = [
+  { v:"1.43", name:"Quest filter", date:"Oct 14", notes:[
+    "New <b>Filter</b> button next to the Daily, Weekly and Season tabs.",
+    "Show only quests that need a camera, quests that don't need a camera, GPS walks and hikes, or sunset quests. It works on daily, weekly and season quests, and the game remembers your choice."] },
   { v:"1.42", name:"Weather tips", date:"Oct 13", notes:[
     "The game checks the weather in your area and shows it on the home screen with a tip for what to do.",
     "On rainy, stormy, very hot, very cold or very windy days it adds <b>Indoor quests</b> (photo proof, like the others).",
@@ -4248,7 +4303,9 @@ function mainView(){
   ${weatherCard()}
   <div class="tabs" role="tablist">
     ${["daily","weekly","season"].map(t=>`<button class="tab" role="tab" aria-selected="${tab===t}" data-act="tab" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}
+    <button class="tab filter-btn ${qFilter!=="all" ? "on" : ""}" data-act="open-filter" aria-expanded="${filterOpen}" aria-label="Filter quests${qFilter!=="all" ? " (on)" : ""}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg> Filter</button>
   </div>
+  ${filterSheet()}
   <section class="panel" role="tabpanel">${panels[tab]()}</section>
 
   <div class="fb-btns"><button class="btn" data-act="open-feedback" data-kind="issue">Report issue</button><button class="btn" data-act="open-feedback" data-kind="idea">Submit Idea</button></div>
@@ -4800,6 +4857,8 @@ document.addEventListener("click", e=>{
   else if(act==="start"){ startQuest(el.dataset.kind, el.dataset.id); }
   else if(act==="cancel"){ cancelQuest(); }
   else if(act==="log"){ logSeasonQuest(el.dataset.id); }
+  else if(act==="open-filter"){ filterOpen = !filterOpen; render(); }
+  else if(act==="filter-set"){ setQFilter(el.dataset.key); }
   else if(act==="wx-enable"){ wxEnable(); }
   else if(act==="wx-retry"){ wxFetch(true); render(); }
   else if(act==="photo-quest"){ photoQuestOpen(el.dataset.kind, el.dataset.id); }
