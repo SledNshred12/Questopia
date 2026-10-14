@@ -552,6 +552,14 @@ canvas{display:block}
 .add-friend .btn{min-width:0}
 .pending-btn{margin-top:12px}
 .feedback .wide{width:100%;margin:6px 0 10px}
+.wx-card{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;background:var(--paper);border:1px solid var(--line);border-radius:18px}
+.wx-card.wx-bad{background:var(--sun-soft);border-color:#E8CF8F}
+.wx-ico{font-size:34px;line-height:1;flex:none}
+.wx-txt{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.wx-txt b{font-size:17px}
+.wx-txt span{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.wx-card.wx-bad .wx-txt span{color:#6B4A00}
+.wx-card .btn{flex:none}
 .fb-btns{display:flex;gap:10px;margin:22px 0 4px}
 .fb-btns .btn{flex:1}
 .fb-text{resize:vertical;min-height:96px;font-size:16px;text-transform:none}
@@ -1441,6 +1449,83 @@ async function qPhotoGot(file){
   save(); render();
 }
 
+/* ---------- Weather ----------
+   The game asks Open-Meteo (a free weather service, no account) for the weather at your rough area (rounded to about 10 km,
+   the same rough spot used for sunsets, kept only on this device). It then suggests quests that fit the weather:
+   on rainy, stormy or extreme days it adds photo-proof indoor quests. */
+const WX_KEY = "questopia-weather-v1";
+const INDOOR_POOL = [
+  { id:"i1", title:"Take a photo of the weather from a window or doorway", pts:10 },
+  { id:"i2", title:"Do a 10-minute workout or stretch indoors", pts:15 },
+  { id:"i3", title:"Cook or bake something", pts:15 },
+  { id:"i4", title:"Draw, paint or build something", pts:15 },
+  { id:"i5", title:"Clean up or rearrange your room", pts:10 },
+  { id:"i6", title:"Read a book for 20 minutes", pts:15 },
+  { id:"i7", title:"Play a board game or cards with someone", pts:15 },
+  { id:"i8", title:"Make a plan for your next outdoor adventure", pts:10 }
+];
+Object.assign(PHOTO_QUESTS, { i1:{n:1,hint:"the weather outside"}, i2:{n:1,hint:"you working out"}, i3:{n:1,hint:"what you made"}, i4:{n:1,hint:"your creation"},
+  i5:{n:1,hint:"your tidy space"}, i6:{n:1,hint:"your book"}, i7:{n:1,hint:"the game"}, i8:{n:1,hint:"your written plan"} });
+const wxF = (navigator.language||"en-US") === "en-US";
+let wx = null; try{ const v = JSON.parse(localStorage.getItem(WX_KEY) || "null"); if(v && v.d && Number.isFinite(v.t)) wx = v; }catch(e){}
+let wxBusy = false, wxFailed = false;
+const wxTemp = c => wxF ? Math.round(c*9/5+32) + "°F" : Math.round(c) + "°C";
+function wxKind(d){
+  const c = d.code, f = d.feels, w = d.wind;
+  let k = c >= 95 ? "storm" : (c >= 51 && c <= 67) || (c >= 80 && c <= 82) ? "rain" : (c >= 71 && c <= 77) || c === 85 || c === 86 ? "snow" : c === 45 || c === 48 ? "fog" : c <= 1 ? "clear" : c === 2 ? "partly" : "cloudy";
+  let extra = "";
+  if(f >= 35) extra = "hot"; else if(f <= -5) extra = "cold"; else if(w >= 30) extra = "windy";
+  return { k, extra };
+}
+const WX_ICON = { storm:"⛈️", rain:"🌧️", snow:"❄️", fog:"🌫️", clear:"☀️", partly:"⛅", cloudy:"☁️" };
+const WX_NAME = { storm:"Thunderstorm", rain:"Rain", snow:"Snow", fog:"Fog", clear:"Clear", partly:"Partly cloudy", cloudy:"Cloudy" };
+function wxInfo(){
+  if(!wx) return null;
+  const d = wx.d, { k, extra } = wxKind(d), night = d.day === 0;
+  const icon = night && (k==="clear"||k==="partly") ? "🌙" : WX_ICON[k];
+  let indoor = false, tip;
+  if(k==="storm"){ indoor = true; tip = "Thunderstorm! Stay inside today and do the indoor quests below. Don't start a walk until it passes."; }
+  else if(k==="rain"){ indoor = true; tip = "It's wet out there. Try the indoor quests below, or wait for a dry break and grab an umbrella."; }
+  else if(extra==="hot"){ indoor = true; tip = "It's dangerously hot. Stay cool and inside, drink water, and save outdoor quests for the evening."; }
+  else if(extra==="cold"){ indoor = true; tip = "It's dangerously cold. Stay warm inside with the indoor quests. If you go out, bundle up and keep it short."; }
+  else if(extra==="windy"){ indoor = true; tip = "Really windy today. Indoor quests are the safe pick, or stay away from trees and open fields."; }
+  else if(k==="snow") tip = "Snow day! Bundle up for a snowy walk or a photo quest, and do the indoor quests if it gets too cold.";
+  else if(k==="fog") tip = "Foggy out. A short walk is fine, but stay on paths you know and wear something bright.";
+  else if(night){ indoor = true; tip = "It's dark out. Do indoor quests or take a short walk with a friend somewhere well lit, and tell someone where you're going."; }
+  else if(k==="clear") tip = d.temp >= 28 ? "Sunny and warm. A great day for a walk or hike. Bring water and sunscreen." : "Clear skies. A great day for walk, hike and photo quests.";
+  else if(k==="partly") tip = "Nice out. A great day for any outdoor quest.";
+  else tip = "Cloudy but dry. A good day for a walk or a photo quest.";
+  return { k, icon, name:WX_NAME[k] + (extra==="hot" ? " · hot" : extra==="cold" ? " · cold" : extra==="windy" ? " · windy" : ""), tip, indoor, temp:wxTemp(d.temp), feels:wxTemp(d.feels) };
+}
+async function wxFetch(force){
+  if(wxBusy || typeof sunLoc === "undefined" || !sunLoc) return;
+  if(!force && wx && Date.now() - wx.t < 30*60000) return;
+  wxBusy = true; wxFailed = false;
+  try{
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${sunLoc.lat}&longitude=${sunLoc.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&wind_speed_unit=mph&timezone=auto`;
+    const r = await fetch(u); if(!r.ok) throw new Error("weather " + r.status);
+    const j = await r.json(), c = j.current || {};
+    const d = { temp:+c.temperature_2m, feels:+c.apparent_temperature, code:+c.weather_code, wind:+c.wind_speed_10m, day:+c.is_day };
+    if(![d.temp,d.feels,d.code,d.wind].every(Number.isFinite)) throw new Error("bad weather");
+    wx = { t:Date.now(), d };
+    try{ localStorage.setItem(WX_KEY, JSON.stringify(wx)); }catch(e){}
+  }catch(e){ wxFailed = true; }
+  wxBusy = false; softRender();
+}
+function wxEnable(){ if(typeof sunFind==="function"){ sunFind(); const t = setInterval(()=>{ if(sunLoc){ clearInterval(t); wxFetch(true); } }, 700); setTimeout(()=>clearInterval(t), 25000); } }
+function weatherCard(){
+  const i = wxInfo();
+  if(!sunLoc && !wx) return `<div class="wx-card"><span class="wx-ico" aria-hidden="true">🌤️</span><div class="wx-txt"><b>Weather tips</b><span>Turn on weather and the game suggests quests that fit today. Only a rough area is used.</span></div><button class="btn solid" data-act="wx-enable" ${sunBusy?"disabled":""}>${sunBusy?"Finding...":"Turn on"}</button></div>`;
+  if(!i) return `<div class="wx-card"><span class="wx-ico" aria-hidden="true">🌤️</span><div class="wx-txt"><b>${wxFailed ? "Couldn't get the weather" : "Checking the weather..."}</b>${wxFailed ? `<span>Check your connection and try again.</span>` : ""}</div>${wxFailed ? `<button class="btn" data-act="wx-retry">Retry</button>` : ""}</div>`;
+  return `<div class="wx-card ${i.indoor ? "wx-bad" : ""}"><span class="wx-ico" aria-hidden="true">${i.icon}</span>
+    <div class="wx-txt"><b>${i.temp} · ${esc(i.name)}</b><span>${esc(i.tip)}</span></div></div>`;
+}
+function indoorSection(){
+  const i = wxInfo(); if(!i || !i.indoor) return "";
+  const list = pick(INDOOR_POOL, "indoor"+state.daily.key, 3);
+  return `<div class="panel-head" style="margin-top:18px"><h2>Indoor quests</h2><span>For today's weather</span></div><ul class="quests">${questRowsFor("daily", list)}</ul>`;
+}
+
 /* ---------- Helpers ---------- */
 const pad = n => String(n).padStart(2,"0");
 const dayKey = (d=new Date()) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -1869,7 +1954,7 @@ function addPoints(n){
   state.earnedTotal = (state.earnedTotal||0) + n;
 }
 function qInfo(kind, id){
-  return kind==="season" ? SEASON.quests.find(q=>q.id===id) : (kind==="daily"?DAILY_POOL:WEEKLY_POOL).find(q=>q.id===id);
+  return kind==="season" ? SEASON.quests.find(q=>q.id===id) : (kind==="daily"?DAILY_POOL.concat(INDOOR_POOL):WEEKLY_POOL).find(q=>q.id===id);
 }
 const bucketKey = kind => kind==="daily" ? state.daily.key : kind==="weekly" ? state.weekly.key : SEASON.id;
 // The running quest, or null. A quest from an earlier day, week or season is dropped.
@@ -1955,7 +2040,7 @@ function logSeasonQuest(id){
 }
 function toggle(kind, id){
   if(PHOTO_QUESTS[id] && !photoOk){ photoQuestOpen(kind, id); return; }
-  const pool = kind==="daily" ? DAILY_POOL : WEEKLY_POOL;
+  const pool = kind==="daily" ? DAILY_POOL.concat(INDOOR_POOL) : WEEKLY_POOL;
   const q = pool.find(x=>x.id===id); if(!q) return;
   const bucket = state[kind];
   if(bucket.done.includes(id)){
@@ -2130,7 +2215,9 @@ function editorView(){
 function questRows(kind){
   const pool = kind==="daily" ? DAILY_POOL : WEEKLY_POOL;
   const key = kind==="daily" ? state.daily.key : state.weekly.key;
-  const list = pick(pool, kind+key, 3);
+  return questRowsFor(kind, pick(pool, kind+key, 3));
+}
+function questRowsFor(kind, list){
   return list.map(q=>{
     const done = state[kind].done.includes(q.id);
     return `
@@ -2148,7 +2235,7 @@ function dailyPanel(){
   const list = pick(DAILY_POOL, "daily"+state.daily.key, 3);
   const n = list.filter(q=>state.daily.done.includes(q.id)).length;
   return `<div class="panel-head"><h2>Today</h2><span>${n} of 3 done · resets at midnight</span></div>
-    <ul class="quests">${questRows("daily")}</ul>`;
+    <ul class="quests">${questRows("daily")}</ul>${indoorSection()}`;
 }
 function weeklyPanel(){
   const list = pick(WEEKLY_POOL, "weekly"+state.weekly.key, 3);
@@ -2469,6 +2556,8 @@ async function getWake(){
   }catch(e){}
 }
 function releaseWake(){ try{ if(wakeLock) wakeLock.release(); }catch(e){} wakeLock = null; }
+setTimeout(()=>{ try{ if(state.username) wxFetch(false); }catch(e){} }, 1500);
+setInterval(()=>{ try{ if(!document.hidden && state.username) wxFetch(false); }catch(e){} }, 10*60000);
 try{ if(sessionStorage.getItem("questopia-merged")){ sessionStorage.removeItem("questopia-merged"); setTimeout(()=>toast("Your saves were combined"), 600); } }catch(e){}
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && live && watchId != null) getWake(); });
 
@@ -3844,8 +3933,12 @@ function tttOpen(){
 function tttClose(){ inTtt = false; tttStopWatch(); }
 
 /* ---------- Update Details: every version and what it added ---------- */
-const APP_VERSION = "1.41";
+const APP_VERSION = "1.42";
 const UPDATES = [
+  { v:"1.42", name:"Weather tips", date:"Oct 13", notes:[
+    "The game checks the weather in your area and shows it on the home screen with a tip for what to do.",
+    "On rainy, stormy, very hot, very cold or very windy days it adds <b>Indoor quests</b> (photo proof, like the others).",
+    "It only uses a rough area (about 10 km) that stays on your phone. You turn it on yourself."] },
   { v:"1.41", name:"Approved tab", date:"Oct 13", notes:[
     "New <b>Approved</b> tab next to Ideas, with every idea and issue the owner approved.",
     "The owner gets an Approve button next to like and dislike. Nobody else sees it.",
@@ -4152,6 +4245,7 @@ function mainView(){
   </button>
   </nav>` : ""}
   ${holiOff ? "" : `<div class="holi-chip">${holidayNow().icon} ${esc(holidayNow().name)} theme</div>`}
+  ${weatherCard()}
   <div class="tabs" role="tablist">
     ${["daily","weekly","season"].map(t=>`<button class="tab" role="tab" aria-selected="${tab===t}" data-act="tab" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}
   </div>
@@ -4706,6 +4800,8 @@ document.addEventListener("click", e=>{
   else if(act==="start"){ startQuest(el.dataset.kind, el.dataset.id); }
   else if(act==="cancel"){ cancelQuest(); }
   else if(act==="log"){ logSeasonQuest(el.dataset.id); }
+  else if(act==="wx-enable"){ wxEnable(); }
+  else if(act==="wx-retry"){ wxFetch(true); render(); }
   else if(act==="photo-quest"){ photoQuestOpen(el.dataset.kind, el.dataset.id); }
   else if(act==="sun-find"){ sunFind(); }
   else if(act==="sun-photo"){ sunPhotoOpen(el.dataset.kind, el.dataset.id); }
