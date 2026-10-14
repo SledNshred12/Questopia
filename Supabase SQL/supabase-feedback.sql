@@ -1,4 +1,4 @@
--- Questopia v1.39: Report issue / Submit Idea board with likes and dislikes.
+-- Questopia v1.39 (updated for v1.41: Approved tab): Report issue / Submit Idea board with likes and dislikes.
 -- Supabase: SQL Editor > New query > paste > Run. Safe to run again.
 --
 -- Signed-in players can post an issue or an idea (max 5 a day), and like or dislike posts (one vote each, tap again to undo).
@@ -15,6 +15,7 @@ create table if not exists public.feedback_posts (
   status text not null default 'open' check (status in ('open', 'planned', 'done', 'declined')),
   created_at timestamptz not null default now()
 );
+alter table public.feedback_posts add column if not exists approved boolean not null default false;
 create index if not exists feedback_posts_kind_idx on public.feedback_posts (kind, created_at desc);
 create index if not exists feedback_posts_user_idx on public.feedback_posts (user_id, created_at);
 
@@ -34,22 +35,22 @@ returns boolean language sql stable security definer set search_path = public, p
   select auth.uid() is not null and exists (select 1 from public.admins a where a.user_id = auth.uid())
 $$;
 
--- the board for one kind ('issue' or 'idea'), best first
+-- the board for one kind ('issue' or 'idea') that is not approved yet, or 'approved' for every approved post, best first
 create or replace function public.feedback_list(p_kind text)
 returns jsonb language plpgsql stable security definer set search_path = public, pg_temp as $$
 declare me uuid := auth.uid();
 begin
   if me is null then raise exception 'not signed in'; end if;
-  if p_kind not in ('issue', 'idea') then return '[]'::jsonb; end if;
+  if p_kind not in ('issue', 'idea', 'approved') then return '[]'::jsonb; end if;
   return coalesce((
     select jsonb_agg(row_to_json(t)) from (
-      select p.id, p.kind, p.body, p.author, p.status, p.created_at,
+      select p.id, p.kind, p.body, p.author, p.status, p.approved, p.created_at,
         (select count(*) from public.feedback_votes v where v.post_id = p.id and v.v = 1) as up,
         (select count(*) from public.feedback_votes v where v.post_id = p.id and v.v = -1) as down,
         coalesce((select v.v from public.feedback_votes v where v.post_id = p.id and v.user_id = me), 0) as mine,
         (p.user_id = me) as own
       from public.feedback_posts p
-      where p.kind = p_kind
+      where case when p_kind = 'approved' then p.approved else (p.kind = p_kind and not p.approved) end
       order by (select coalesce(sum(v.v), 0) from public.feedback_votes v where v.post_id = p.id) desc, p.created_at desc
       limit 100
     ) t
@@ -103,6 +104,16 @@ begin
   return jsonb_build_object('ok', true);
 end $$;
 
+-- admins only: approve a post (it moves to the Approved tab) or take the approval back
+create or replace function public.feedback_approve(p_post bigint, p_approved boolean)
+returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  if auth.uid() is null then raise exception 'not signed in'; end if;
+  if not public.feedback_is_admin() then return jsonb_build_object('ok', false, 'error', 'not_allowed'); end if;
+  update public.feedback_posts set approved = coalesce(p_approved, false) where id = p_post;
+  return jsonb_build_object('ok', true);
+end $$;
+
 -- admins only: mark a post open / planned / done / declined
 create or replace function public.feedback_status(p_post bigint, p_status text)
 returns jsonb language plpgsql security definer set search_path = public, pg_temp as $$
@@ -120,9 +131,11 @@ revoke all on function public.feedback_post(text, text) from public, anon;
 revoke all on function public.feedback_vote(bigint, int) from public, anon;
 revoke all on function public.feedback_remove(bigint) from public, anon;
 revoke all on function public.feedback_status(bigint, text) from public, anon;
+revoke all on function public.feedback_approve(bigint, boolean) from public, anon;
 grant execute on function public.feedback_is_admin() to authenticated;
 grant execute on function public.feedback_list(text) to authenticated;
 grant execute on function public.feedback_post(text, text) to authenticated;
 grant execute on function public.feedback_vote(bigint, int) to authenticated;
 grant execute on function public.feedback_remove(bigint) to authenticated;
 grant execute on function public.feedback_status(bigint, text) to authenticated;
+grant execute on function public.feedback_approve(bigint, boolean) to authenticated;
